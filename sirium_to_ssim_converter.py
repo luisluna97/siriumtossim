@@ -215,38 +215,72 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
             print(f"⚠️  Erro ao carregar aeronaves: {e}")
             icao_to_iata_aircraft = {}
         
-        # Determinar período de dados
+        # Determinar período de dados - versão ultra robusta
         try:
+            print("📅 Determinando período de dados...")
+            
+            # Usar datas fixas como fallback seguro
+            data_min = datetime.now()
+            data_max = datetime.now() + timedelta(days=30)
+            
             if 'Eff Date' in df_filtered.columns and 'Disc Date' in df_filtered.columns:
-                # Filtrar apenas valores válidos (não NaN e não string vazia)
-                eff_dates = df_filtered['Eff Date'].dropna()
-                disc_dates = df_filtered['Disc Date'].dropna()
-                
-                if len(eff_dates) > 0 and len(disc_dates) > 0:
-                    # Converter para datetime se necessário
-                    eff_dates = pd.to_datetime(eff_dates, errors='coerce').dropna()
-                    disc_dates = pd.to_datetime(disc_dates, errors='coerce').dropna()
+                try:
+                    # Converter todas as datas para string primeiro, depois datetime
+                    eff_dates_str = df_filtered['Eff Date'].astype(str)
+                    disc_dates_str = df_filtered['Disc Date'].astype(str)
                     
-                    if len(eff_dates) > 0 and len(disc_dates) > 0:
-                        data_min = eff_dates.min()
-                        data_max = disc_dates.max()
+                    # Filtrar strings válidas
+                    eff_dates_valid = eff_dates_str[
+                        (eff_dates_str != 'nan') & 
+                        (eff_dates_str != '') & 
+                        (eff_dates_str.notna())
+                    ]
+                    
+                    disc_dates_valid = disc_dates_str[
+                        (disc_dates_str != 'nan') & 
+                        (disc_dates_str != '') & 
+                        (disc_dates_str.notna())
+                    ]
+                    
+                    if len(eff_dates_valid) > 0 and len(disc_dates_valid) > 0:
+                        # Converter para datetime sem comparações diretas
+                        eff_dt_list = []
+                        for date_str in eff_dates_valid:
+                            try:
+                                dt = pd.to_datetime(date_str, errors='coerce')
+                                if pd.notna(dt):
+                                    eff_dt_list.append(dt)
+                            except:
+                                continue
+                        
+                        disc_dt_list = []
+                        for date_str in disc_dates_valid:
+                            try:
+                                dt = pd.to_datetime(date_str, errors='coerce')
+                                if pd.notna(dt):
+                                    disc_dt_list.append(dt)
+                            except:
+                                continue
+                        
+                        if eff_dt_list and disc_dt_list:
+                            data_min = min(eff_dt_list)
+                            data_max = max(disc_dt_list)
+                            print(f"   ✅ Período extraído: {data_min.date()} a {data_max.date()}")
+                        else:
+                            print(f"   ⚠️  Usando datas padrão (não foi possível converter)")
                     else:
-                        # Fallback se não conseguir converter
-                        data_min = datetime.now()
-                        data_max = datetime.now() + timedelta(days=30)
-                else:
-                    # Fallback se não há dados válidos
-                    data_min = datetime.now()
-                    data_max = datetime.now() + timedelta(days=30)
+                        print(f"   ⚠️  Usando datas padrão (dados inválidos)")
+                        
+                except Exception as e:
+                    print(f"   ⚠️  Erro ao processar datas, usando padrão: {e}")
             else:
-                # Fallback para data atual
-                data_min = datetime.now()
-                data_max = datetime.now() + timedelta(days=30)
+                print(f"   ⚠️  Colunas de data não encontradas, usando padrão")
             
             data_min_str = parse_date_sfo(data_min)
             data_max_str = parse_date_sfo(data_max)
+            
         except Exception as e:
-            print(f"⚠️  Erro ao determinar período: {e}")
+            print(f"⚠️  Erro geral ao determinar período: {e}")
             data_min_str = datetime.now().strftime("%d%b%y").upper()
             data_max_str = (datetime.now() + timedelta(days=30)).strftime("%d%b%y").upper()
         
