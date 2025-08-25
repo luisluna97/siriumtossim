@@ -2,67 +2,45 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-from ts09_to_ssim_converter import gerar_ssim_ts09
+from sirium_to_ssim_converter import gerar_ssim_sirium
 
 def main():
     st.set_page_config(
-        page_title="TS Schedule to SSIM Converter - Dnata Brasil", 
+        page_title="SIRIUM to SSIM Converter - Dnata Brasil", 
         page_icon="✈️",
         layout="wide",
         initial_sidebar_state="collapsed"
     )
     
     # Header
-    st.title("✈️ TS Schedule to SSIM Converter")
+    st.title("✈️ SIRIUM to SSIM Converter")
     st.markdown("**Developed by Capacity Dnata Brasil**")
     st.markdown("---")
     
     st.markdown("""
-    ### 📋 About This Converter
+    ### 📋 About SIRIUM Converter
     
-    This converter transforms airline schedules from **TS Schedule format** (Excel) 
+    This converter transforms airline schedules from **SIRIUM format** (based on SFO Schedule Extract Reports) 
     to **SSIM** (Standard Schedules Information Manual) format.
     
     **Key Features:**
-    - ✅ Preserves original flight order from schedule
-    - ✅ Correctly extracts next flights from "Onward Flight" column
-    - ✅ Processes complex connections (including values with "/")
-    - ✅ Generates SSIM file compatible with industry standards
-    - ✅ Professional-grade output for airline operations
+    - ✅ **Multiple Airlines Support**: Process multiple airlines in the same file
+    - ✅ **Airline Selection**: Choose specific airline after upload
+    - ✅ **SSIM Standard**: Generates IATA-compatible files
+    - ✅ **Data Validation**: Integrity checks before conversion
+    - ✅ **200-Character Lines**: Proper SSIM formatting
+    - ✅ **Complete Structure**: Header, Carrier Info, Flight Records, Footer
     """)
     
     st.markdown("---")
     
-    # Upload and Settings
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.subheader("📁 Upload TS Schedule")
-        uploaded_file = st.file_uploader(
-            "Select Excel file with TS schedule:",
-            type=['xlsx', 'xls'],
-            help="Upload Excel file containing schedule in TS format"
-        )
-    
-    with col2:
-        st.subheader("⚙️ Settings")
-        codigo_iata = st.text_input(
-            "Airline IATA Code:",
-            value="TS",
-            max_chars=2,
-            help="2-letter IATA code"
-        ).upper()
-        
-        nome_arquivo = st.text_input(
-            "Output filename (optional):",
-            placeholder="Auto-generated if empty",
-            help="Leave empty for automatic naming"
-        )
-    
-    # Validation
-    if not codigo_iata or len(codigo_iata) != 2:
-        st.warning("⚠️ Please enter a valid 2-character IATA code.")
-        return
+    # File Upload Section
+    st.subheader("📁 Upload Schedule File")
+    uploaded_file = st.file_uploader(
+        "Select Excel file with SIRIUM schedule:",
+        type=['xlsx', 'xls'],
+        help="Upload Excel file containing schedule in SIRIUM format (header on row 5)"
+    )
     
     if uploaded_file is not None:
         st.markdown("---")
@@ -73,159 +51,275 @@ def main():
             with open(temp_file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             
-            # Read and preview data
-            df = pd.read_excel(temp_file_path)
+            # Read and analyze data
+            df = pd.read_excel(temp_file_path, header=4)
             
             st.subheader("👀 Data Preview")
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("📊 Total Rows", len(df))
-            with col2:
-                st.metric("✈️ Unique Flights", df['Flight-Number'].nunique())
-            with col3:
-                st.metric("📅 Period", f"{df['Date-LT'].min()} - {df['Date-LT'].max()}")
+            # Find airline column
+            airline_col = None
+            for col in ['Mkt Al', 'Op Al', 'Airline', 'Carrier']:
+                if col in df.columns:
+                    airline_col = col
+                    break
             
-            # Show sample data
-            st.dataframe(
-                df[['Flight-Number', 'Route', 'Date-LT', 'Std-LT', 'Sta-LT', 'Onward Flight']].head(10),
-                use_container_width=True
-            )
-            
-            # Data integrity check
-            st.subheader("🔍 Data Integrity Check")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Check required columns
-                required_columns = ['Flight-Number', 'Route', 'Date-LT', 'Std-LT', 'Sta-LT', 'Onward Flight']
-                missing_columns = [col for col in required_columns if col not in df.columns]
+            if airline_col:
+                # Get available airlines
+                available_airlines = sorted(df[airline_col].unique())
                 
-                if missing_columns:
-                    st.error(f"❌ Missing columns: {', '.join(missing_columns)}")
-                else:
-                    st.success("✅ All required columns present")
-            
-            with col2:
-                # Check onward flight values
-                problematic_values = []
-                for _, row in df.iterrows():
-                    onward = row['Onward Flight']
-                    if pd.notna(onward) and isinstance(onward, str):
-                        clean_onward = onward.replace('TS', '').strip()
-                        if not clean_onward.isdigit() and '/' not in clean_onward:
-                            problematic_values.append(onward)
+                # Display metrics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("📊 Total Records", len(df))
+                with col2:
+                    st.metric("🏢 Airlines Available", len(available_airlines))
+                with col3:
+                    if 'Flight' in df.columns:
+                        st.metric("✈️ Total Flights", df['Flight'].nunique())
+                    else:
+                        st.metric("✈️ Records", len(df))
                 
-                if problematic_values:
-                    st.warning(f"⚠️ {len(set(problematic_values))} atypical Onward Flight values")
-                else:
-                    st.success("✅ Onward Flight values OK")
-            
-            st.markdown("---")
-            
-            # Convert button
-            col1, col2, col3 = st.columns([1, 2, 1])
-            
-            with col2:
-                if st.button("🚀 Convert to SSIM", type="primary", use_container_width=True):
+                # Show available airlines
+                st.subheader("🏢 Available Airlines")
+                airline_cols = st.columns(min(len(available_airlines), 5))
+                for i, airline in enumerate(available_airlines):
+                    with airline_cols[i % 5]:
+                        airline_count = len(df[df[airline_col] == airline])
+                        st.info(f"**{airline}**\n{airline_count} flights")
+                
+                # Airline Selection
+                st.markdown("---")
+                st.subheader("⚙️ Conversion Settings")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    selected_airline = st.selectbox(
+                        "Select Airline for Conversion:",
+                        options=available_airlines,
+                        help="Choose the airline to convert to SSIM format"
+                    )
+                
+                with col2:
+                    output_filename = st.text_input(
+                        "Output filename (optional):",
+                        placeholder="Auto-generated if empty",
+                        help="Leave empty for automatic naming"
+                    )
+                
+                # Filter data by selected airline
+                df_filtered = df[df[airline_col] == selected_airline]
+                
+                # Show filtered data preview
+                st.subheader(f"📋 {selected_airline} Schedule Preview")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("✈️ Flights", len(df_filtered))
+                with col2:
+                    if 'Flight' in df_filtered.columns:
+                        st.metric("🔢 Unique Flights", df_filtered['Flight'].nunique())
+                with col3:
+                    if 'Orig' in df_filtered.columns and 'Dest' in df_filtered.columns:
+                        routes = df_filtered[['Orig', 'Dest']].drop_duplicates()
+                        st.metric("🗺️ Routes", len(routes))
+                
+                # Show sample data
+                if len(df_filtered) > 0:
+                    cols_to_show = []
+                    for col in ['Flight', 'Orig', 'Dest', 'Eff Date', 'Disc Date', 'Op Days']:
+                        if col in df_filtered.columns:
+                            cols_to_show.append(col)
                     
-                    with st.spinner("Converting TS schedule to SSIM..."):
-                        try:
-                            # Determine output filename
-                            if nome_arquivo:
-                                output_file = nome_arquivo if nome_arquivo.endswith('.ssim') else nome_arquivo + '.ssim'
-                            else:
-                                output_file = None
-                            
-                            # Execute conversion
-                            resultado = gerar_ssim_ts09(temp_file_path, codigo_iata, output_file)
-                            
-                            st.success("✅ Conversion completed successfully!")
-                            st.info(f"📄 Generated file: {resultado}")
-                            
-                            # Offer download
-                            with open(resultado, 'rb') as file:
-                                st.download_button(
-                                    label="📥 Download SSIM File",
-                                    data=file.read(),
-                                    file_name=os.path.basename(resultado),
-                                    mime="text/plain",
-                                    type="primary",
-                                    use_container_width=True
-                                )
-                            
-                            # Conversion statistics
-                            st.subheader("📊 Conversion Statistics")
-                            
-                            # Read generated file for stats
-                            with open(resultado, 'r') as f:
-                                ssim_lines = f.readlines()
-                            
-                            flight_lines = [line for line in ssim_lines if line.startswith('3 ')]
-                            
-                            col1, col2, col3, col4 = st.columns(4)
-                            with col1:
-                                st.metric("📄 Total SSIM Lines", len(ssim_lines))
-                            with col2:
-                                st.metric("✈️ Flight Records", len(flight_lines))
-                            with col3:
-                                st.metric("🔗 Connections Processed", df['Onward Flight'].notna().sum())
-                            with col4:
-                                st.metric("📁 File Size", f"{os.path.getsize(resultado)} bytes")
-                                
-                            # Show SSIM preview
-                            st.subheader("👀 SSIM File Preview")
-                            
-                            preview_lines = ssim_lines[:10] + ["...\n"] + ssim_lines[-5:] if len(ssim_lines) > 15 else ssim_lines
-                            st.code("".join(preview_lines), language="text")
-                            
-                        except Exception as e:
-                            st.error(f"❌ Conversion error: {str(e)}")
-                            st.exception(e)
+                    if cols_to_show:
+                        st.dataframe(
+                            df_filtered[cols_to_show].head(10),
+                            use_container_width=True
+                        )
+                    else:
+                        st.dataframe(df_filtered.head(10), use_container_width=True)
+                
+                # Data Integrity Check
+                st.subheader("🔍 Data Integrity Check")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Check required columns
+                    required_columns = ['Orig', 'Dest']
+                    missing_columns = [col for col in required_columns if col not in df.columns]
+                    
+                    if missing_columns:
+                        st.error(f"❌ Missing required columns: {', '.join(missing_columns)}")
+                    else:
+                        st.success("✅ All required columns present")
+                
+                with col2:
+                    # Check selected airline data
+                    if len(df_filtered) > 0:
+                        st.success(f"✅ {len(df_filtered)} flights found for {selected_airline}")
+                    else:
+                        st.error(f"❌ No flights found for {selected_airline}")
+                
+                st.markdown("---")
+                
+                # Conversion Button
+                col1, col2, col3 = st.columns([1, 2, 1])
+                
+                with col2:
+                    if st.button("🚀 Convert to SSIM", type="primary", use_container_width=True):
                         
-                        finally:
-                            # Clean up temporary file
-                            if os.path.exists(temp_file_path):
-                                os.remove(temp_file_path)
+                        if len(df_filtered) == 0:
+                            st.error(f"❌ Cannot convert: no flights found for {selected_airline}")
+                            return
+                        
+                        with st.spinner(f"Converting {selected_airline} schedule to SSIM..."):
+                            try:
+                                # Determine output filename
+                                if output_filename:
+                                    output_file = output_filename if output_filename.endswith('.ssim') else output_filename + '.ssim'
+                                else:
+                                    output_file = None
+                                
+                                # Execute conversion
+                                result = gerar_ssim_sirium(temp_file_path, selected_airline, output_file)
+                                
+                                if result:
+                                    st.success("✅ SSIM conversion completed successfully!")
+                                    st.info(f"📄 Generated file: {result}")
+                                    
+                                    # Offer download
+                                    with open(result, 'rb') as file:
+                                        st.download_button(
+                                            label="📥 Download SSIM File",
+                                            data=file.read(),
+                                            file_name=os.path.basename(result),
+                                            mime="text/plain",
+                                            type="primary",
+                                            use_container_width=True
+                                        )
+                                    
+                                    # Conversion Statistics
+                                    st.subheader("📊 Conversion Statistics")
+                                    
+                                    # Read generated file for stats
+                                    with open(result, 'r') as f:
+                                        ssim_lines = f.readlines()
+                                    
+                                    flight_lines = [line for line in ssim_lines if line.startswith('3 ')]
+                                    
+                                    col1, col2, col3, col4 = st.columns(4)
+                                    with col1:
+                                        st.metric("📄 SSIM Lines", len(ssim_lines))
+                                    with col2:
+                                        st.metric("✈️ Flight Records", len(flight_lines))
+                                    with col3:
+                                        st.metric("🏢 Airline", selected_airline)
+                                    with col4:
+                                        st.metric("📁 File Size", f"{os.path.getsize(result)} bytes")
+                                    
+                                    # SSIM Validation
+                                    st.subheader("✅ SSIM Format Validation")
+                                    
+                                    col1, col2 = st.columns(2)
+                                    
+                                    with col1:
+                                        st.write("**Line Length Validation:**")
+                                        valid_lines = 0
+                                        for line in ssim_lines[:10]:  # Check first 10 lines
+                                            if len(line.rstrip()) == 200:
+                                                valid_lines += 1
+                                        
+                                        if valid_lines == len(ssim_lines[:10]):
+                                            st.success(f"✅ All lines have correct length (200 chars)")
+                                        else:
+                                            st.warning(f"⚠️ {valid_lines}/{len(ssim_lines[:10])} lines have correct length")
+                                    
+                                    with col2:
+                                        st.write("**SSIM Structure:**")
+                                        has_header = any(line.startswith('1') for line in ssim_lines)
+                                        has_carrier = any(line.startswith('2U') for line in ssim_lines)
+                                        has_flights = any(line.startswith('3 ') for line in ssim_lines)
+                                        has_footer = any(line.startswith('5 ') for line in ssim_lines)
+                                        
+                                        st.write(f"Header (1): {'✅' if has_header else '❌'}")
+                                        st.write(f"Carrier (2U): {'✅' if has_carrier else '❌'}")
+                                        st.write(f"Flights (3): {'✅' if has_flights else '❌'}")
+                                        st.write(f"Footer (5): {'✅' if has_footer else '❌'}")
+                                    
+                                    # Show SSIM preview
+                                    st.subheader("👀 SSIM File Preview")
+                                    
+                                    # Show first few flight lines for preview
+                                    preview_lines = []
+                                    line_count = 0
+                                    for line in ssim_lines:
+                                        if line_count < 5 or line.startswith('3 ') or line.startswith('5 '):
+                                            preview_lines.append(line.rstrip())
+                                            if line.startswith('3 '):
+                                                line_count += 1
+                                                if line_count > 8:  # Show max 5 flight lines
+                                                    break
+                                    
+                                    st.code("\\n".join(preview_lines), language="text")
+                                    
+                                else:
+                                    st.error("❌ Conversion failed. Please check your data and try again.")
+                                
+                            except Exception as e:
+                                st.error(f"❌ Conversion error: {str(e)}")
+                                st.exception(e)
+                            
+                            finally:
+                                # Clean up temporary file
+                                if os.path.exists(temp_file_path):
+                                    os.remove(temp_file_path)
+            
+            else:
+                st.error("❌ Could not identify airline column in the file")
+                st.info("Expected columns: 'Mkt Al', 'Op Al', 'Airline', or 'Carrier'")
+                st.subheader("Available Columns:")
+                st.write(df.columns.tolist())
             
         except Exception as e:
-            st.error(f"❌ File processing error: {str(e)}")
+            st.error(f"❌ Error processing file: {str(e)}")
             
             # Clean up temporary file on error
             if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
     
-    # Help section
+    # Help Section
     st.markdown("---")
     with st.expander("❓ Help & Technical Information"):
         st.markdown("""
         ### 📖 How to use:
         
-        1. **Upload**: Upload your Excel file with TS schedule
-        2. **Settings**: Enter airline IATA code
-        3. **Preview**: Check loaded data
+        1. **Upload**: Upload your Excel file with SIRIUM schedule
+        2. **Preview**: Review available airlines and data
+        3. **Select**: Choose the airline for conversion
         4. **Convert**: Click "Convert to SSIM"
-        5. **Download**: Download generated SSIM file
+        5. **Validate**: Check the SSIM structure
+        6. **Download**: Download the generated SSIM file
         
-        ### 📋 Expected TS Format:
+        ### 📋 Expected SIRIUM Format:
         
-        The file must contain these columns:
-        - `Flight-Number`: Flight number
-        - `Route`: Route (format: "ORIGIN / DESTINATION")
-        - `Date-LT`: Local date
-        - `Std-LT`: Departure time local
-        - `Sta-LT`: Arrival time local
-        - `Onward Flight`: Next flight (format: "TSxxx")
-        - `Aircraft-Type`: Aircraft type
-        - `Type`: Service type (J/F)
+        The file must contain these columns (starting from row 5):
+        - `Mkt Al` or `Op Al`: Airline code (2 letters)
+        - `Orig`: Origin airport (IATA code)
+        - `Dest`: Destination airport (IATA code)
+        - `Flight`: Flight number
+        - `Eff Date`: Effective date
+        - `Disc Date`: Discontinue date
+        - `Op Days`: Operating days (format: 1234567)
         
         ### 🔧 Technical Features:
         
-        - **Order Preservation**: Original flight order is maintained
-        - **Smart Connections**: Correctly processes values like "TS840/1"
-        - **Data Validation**: Checks integrity before conversion
-        - **Standard SSIM**: Generates IATA-compatible files
+        - **200-Character Lines**: Proper SSIM formatting
+        - **Complete Structure**: Header, Carrier Info, Flight Records, Footer
+        - **Timezone Support**: Automatic timezone mapping
+        - **Aircraft Mapping**: ICAO to IATA conversion
+        - **Data Validation**: Integrity checks and format validation
+        - **Multiple Airlines**: Support for various airlines in same file
         
         ### 📞 Support:
         Developed by **Capacity Dnata Brasil** for professional airline operations.

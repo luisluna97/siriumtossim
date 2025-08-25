@@ -1,125 +1,140 @@
-# ✈️ TS Schedule to SSIM Converter
+# ✈️ SIRIUM to SSIM Converter
 
-A professional web application for converting airline schedules from TS format to SSIM (Standard Schedules Information Manual) format.
+**Professional airline schedule converter developed by Capacity Dnata Brasil**
 
-**Developed by Capacity Dnata Brasil**
+## 🎯 Overview
 
-## 🚀 Features
+SIRIUM is a powerful converter that transforms airline schedules from SIRIUM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
 
-- **Smart Flight Connections**: Extracts real next flights from "Onward Flight" column
-- **Order Preservation**: Maintains original flight sequence from schedule
-- **Complex Processing**: Handles values like "TS840/1" correctly
-- **Industry Standard**: Generates IATA-compatible SSIM files
-- **User-friendly Interface**: Professional Streamlit web application
-- **Data Validation**: Comprehensive integrity checks before conversion
+## ✨ Key Features
 
-## 📋 How It Works
+- 🏢 **Multiple Airlines Support**: Process multiple airlines in the same file
+- 🎯 **Airline Selection**: Choose specific airline after file upload
+- ✅ **SSIM Standard**: Generates IATA-compatible 200-character line format
+- 🔍 **Data Validation**: Complete integrity checks and format validation
+- 📊 **Real-time Preview**: View data before conversion
+- 📥 **Instant Download**: Download generated SSIM files immediately
 
-1. Upload your Excel file containing the TS schedule
-2. Enter the airline IATA code (2 letters)
-3. Preview and validate your data
-4. Convert to SSIM format
-5. Download the generated SSIM file
+## 🚀 Quick Start
 
-## 🔧 Technical Specifications
-
-### Input Format (TS Schedule)
-The Excel file must contain these columns:
-- `Flight-Number`: Flight number
-- `Route`: Route in format "ORIGIN / DESTINATION"
-- `Date-LT`: Local date
-- `Std-LT`: Departure time local
-- `Sta-LT`: Arrival time local
-- `Onward Flight`: Next connecting flight (format: "TSxxx")
-- `Aircraft-Type`: Aircraft type code
-- `Type`: Service type (J=Passenger, F=Freight)
-
-### Output Format (SSIM)
-- Standard IATA SSIM format
-- 200-character fixed-width lines
-- Type 3 records for flight data
-- Proper timezone handling
-- Sequential line numbering
-
-## 🌐 Live Demo
-
-Access the application at: [Your Streamlit Cloud URL]
-
-## 💻 Local Development
-
-### Prerequisites
-- Python 3.8+
-- pip
-
-### Installation
-```bash
-git clone [repository-url]
-cd ts-schedule-converter
-pip install -r requirements.txt
-```
-
-### Run locally
+### Web Application
 ```bash
 streamlit run app.py
 ```
 
+### Command Line
+```python
+from sirium_to_ssim_converter import gerar_ssim_sirium
+
+result = gerar_ssim_sirium(
+    excel_path="schedule.xlsx",
+    codigo_iata_selecionado="AI",
+    output_file="AI_schedule.ssim"
+)
+```
+
+## 📊 Input Format
+
+The Excel file should have:
+- **Header on row 5** (index 4)
+- **Required columns**:
+  - `Mkt Al` or `Op Al`: Airline code (2 letters)
+  - `Orig`: Origin airport (IATA code)
+  - `Dest`: Destination airport (IATA code)
+  - `Flight`: Flight number
+  - `Eff Date`: Effective date
+  - `Disc Date`: Discontinue date
+  - `Op Days`: Operating days (1234567 format)
+
+## 📄 Output Format
+
+Generates standard SSIM files with:
+- **200-character lines**: IATA standard format
+- **Complete structure**: Header, Carrier Info, Flight Records, Footer
+- **Proper formatting**: Correct line breaks and spacing
+- **Sequential numbering**: Each line properly numbered
+
+### Sample SSIM Output:
+```
+1AIRLINE STANDARD SCHEDULE DATA SET                                 00000001
+2UAI  0008    19JUL2505SEP2525AUG25Created by Capacity Dnata Brasil 00000006
+3 AI 01730101J01AUG2501AUG251234567 DEL0000+0530  SFO0000-0800  320 00000011
+5 AI 25AUG25                                                        000022E000023
+```
+
+## 🏢 Supported Airlines
+
+Supports any airline present in the input file, including:
+- **AI** (Air India)
+- **BA** (British Airways)
+- **EK** (Emirates)
+- **LH** (Lufthansa)
+- **QF** (Qantas)
+- And many more...
+
+## 🛠️ Installation
+
+```bash
+git clone <repository-url>
+cd sirium-converter
+pip install -r requirements.txt
+```
+
+## 📋 Dependencies
+
+- `streamlit>=1.28.0`
+- `pandas>=1.5.0`
+- `openpyxl>=3.0.0`
+
+## 🔧 Technical Features
+
+- **Timezone Support**: Automatic timezone mapping for airports
+- **Aircraft Mapping**: ICAO to IATA aircraft code conversion
+- **Data Validation**: Comprehensive checks before conversion
+- **Error Handling**: Robust error handling and user feedback
+- **Memory Efficient**: Optimized for large schedule files
+
 ## 📁 Project Structure
 
 ```
-ts-schedule-converter/
-├── app.py                      # Main Streamlit application
-├── ts09_to_ssim_converter.py   # Core conversion logic
-├── requirements.txt            # Python dependencies
-├── README.md                   # This file
-├── airport.csv                 # Airport codes and timezones
-├── ACT TYPE.xlsx              # Aircraft type mappings
-└── iata_airlines.csv          # Airline codes reference
+├── app.py                          # Main Streamlit application
+├── sirium_to_ssim_converter.py     # Core converter module
+├── requirements.txt                # Python dependencies
+├── README.md                       # This file
+├── airport.csv                     # Airport timezone mapping
+└── ACT TYPE.xlsx                   # Aircraft type mapping
 ```
 
-## 🔍 Key Improvements Over Standard Converters
+## 🎮 How to Use
 
-1. **Real Connection Logic**: Instead of repeating the same flight number, extracts actual next flight from schedule data
-2. **Original Order Preservation**: Maintains the flight sequence as defined in the original schedule
-3. **Robust Data Processing**: Handles edge cases like "TS840/1" format in onward flights
-4. **Professional Interface**: Clean, intuitive web interface for non-technical users
+1. **Upload** your Excel file with SIRIUM schedule
+2. **Preview** available airlines and data structure
+3. **Select** the specific airline for conversion
+4. **Convert** to SSIM format with validation
+5. **Download** the generated SSIM file
 
-## 📊 Supported Data
+## ✅ Validation Features
 
-- **Airlines**: Any IATA-coded airline
-- **Routes**: International and domestic
-- **Aircraft Types**: All standard IATA aircraft codes
-- **Schedules**: Daily, weekly, or custom patterns
-- **Timezones**: Automatic UTC conversion
-
-## 🛠️ Support Files
-
-The converter uses reference files for enhanced accuracy:
-- `airport.csv`: Airport codes, names, and timezone data
-- `ACT TYPE.xlsx`: Aircraft type code mappings (ICAO to IATA)
-- `iata_airlines.csv`: Airline reference data
-
-## 📈 Performance
-
-- Processes 1000+ flight records in seconds
-- Memory efficient for large schedules
-- Real-time validation and feedback
-- Automatic error handling and recovery
-
-## 🔒 Data Security
-
-- Files processed locally (no external data transmission)
-- Temporary files automatically cleaned up
-- No data retention on server
-- GDPR compliant processing
+The converter includes comprehensive validation:
+- ✅ **Line Length**: Ensures 200-character lines
+- ✅ **SSIM Structure**: Validates Header, Carrier, Flights, Footer
+- ✅ **Data Integrity**: Checks required fields and formats
+- ✅ **Format Compliance**: IATA standard compliance
 
 ## 📞 Support
 
-For technical support or feature requests, contact the **Capacity Dnata Brasil** team.
+Developed by **Capacity Dnata Brasil** for professional airline operations.
 
-## 📄 License
+For technical support or questions, please contact the development team.
 
-This project is proprietary software developed by Dnata Brasil for internal airline operations.
+## 🏆 Why SIRIUM?
+
+SIRIUM combines the best of both worlds:
+- ✅ **Reliability** of proven SSIM standards
+- ✅ **Flexibility** of modern file processing
+- ✅ **Validation** with real-time feedback
+- ✅ **User Experience** with intuitive interface
 
 ---
 
-**Dnata Brasil** - Professional Aviation Solutions
+*Version 1.0 - Professional Airline Operations Tool*
