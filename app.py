@@ -328,10 +328,15 @@ def main():
         Developed by **Capacity Dnata Brasil** for professional airline operations.
         
         ### 📋 Version Information:
+        """
+        
+        # Add version info separately to avoid formatting issues
+        version_info = get_version_info()
+        st.markdown(f"""
         - **Version:** {version_info['version']}
         - **Release Date:** {version_info['date']}
         - **Latest Changes:** {version_info['notes']}
-        """.format(version_info=get_version_info()))
+        """)
 
 if __name__ == "__main__":
     main()

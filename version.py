@@ -2,9 +2,9 @@
 SIRIUM Version Management
 """
 
-VERSION = "1.0.0.1"
+VERSION = "1.0.0.2"
 VERSION_DATE = "2024-12-25"
-VERSION_NOTES = "Fix: Data filtering for SFO files with trailing invalid rows"
+VERSION_NOTES = "Fix: String formatting error and enhanced data type protection"
 
 def get_version_info():
     """Return version information"""

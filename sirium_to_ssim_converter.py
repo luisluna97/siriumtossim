@@ -142,8 +142,11 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
         print(f"📋 Colunas: {df.columns.tolist()}")
         
         # Filtrar apenas linhas válidas (que têm dados de voo)
+        print("🧹 Iniciando limpeza de dados...")
+        
         # Remove linhas onde Orig ou Dest são NaN/vazios
         df_clean = df.dropna(subset=['Orig', 'Dest'])
+        print(f"   Após remover NaN: {len(df_clean)} linhas")
         
         # Remove linhas onde Orig ou Dest são strings vazias
         df_clean = df_clean[
@@ -152,8 +155,14 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
             (df_clean['Orig'].astype(str).str.strip() != 'nan') & 
             (df_clean['Dest'].astype(str).str.strip() != 'nan')
         ]
+        print(f"   Após remover strings vazias: {len(df_clean)} linhas")
         
-        print(f"🧹 Após limpeza: {len(df_clean)} linhas válidas (removidas {len(df) - len(df_clean)} linhas inválidas)")
+        # Filtro adicional: remover linhas onde Flight não é válido
+        if 'Flight' in df_clean.columns:
+            df_clean = df_clean[pd.to_numeric(df_clean['Flight'], errors='coerce').notna()]
+            print(f"   Após filtrar Flight inválidos: {len(df_clean)} linhas")
+        
+        print(f"🧹 Limpeza concluída: {len(df_clean)} linhas válidas (removidas {len(df) - len(df_clean)} linhas inválidas)")
         df = df_clean
         
         # Filtrar pela companhia aérea selecionada
@@ -290,11 +299,23 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
             # Inicializar contador de datas por voo (IGUAL AO OLD_PROJECT)
             flight_date_counter = {}
             
-            # Ordenar o DataFrame (similar ao old_project)
-            if 'Flight' in df_filtered.columns:
-                df_sorted = df_filtered.sort_values(by=['Flight', 'Eff Date'] if 'Eff Date' in df_filtered.columns else ['Flight'])
-            else:
-                df_sorted = df_filtered
+            # Ordenar o DataFrame (similar ao old_project) - com proteção para tipos mistos
+            try:
+                if 'Flight' in df_filtered.columns:
+                    # Converter Flight para numérico antes de ordenar
+                    df_filtered['Flight_num'] = pd.to_numeric(df_filtered['Flight'], errors='coerce')
+                    
+                    if 'Eff Date' in df_filtered.columns:
+                        # Converter datas para datetime antes de ordenar
+                        df_filtered['Eff Date_dt'] = pd.to_datetime(df_filtered['Eff Date'], errors='coerce')
+                        df_sorted = df_filtered.sort_values(by=['Flight_num', 'Eff Date_dt'])
+                    else:
+                        df_sorted = df_filtered.sort_values(by=['Flight_num'])
+                else:
+                    df_sorted = df_filtered
+            except Exception as e:
+                print(f"⚠️  Erro ao ordenar dados: {e}")
+                df_sorted = df_filtered  # Usar sem ordenação se falhar
             
             print("🔄 Escrevendo linhas de voos...")
             
