@@ -194,8 +194,26 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
         # Determinar período de dados
         try:
             if 'Eff Date' in df_filtered.columns and 'Disc Date' in df_filtered.columns:
-                data_min = df_filtered['Eff Date'].min()
-                data_max = df_filtered['Disc Date'].max()
+                # Filtrar apenas valores válidos (não NaN e não string vazia)
+                eff_dates = df_filtered['Eff Date'].dropna()
+                disc_dates = df_filtered['Disc Date'].dropna()
+                
+                if len(eff_dates) > 0 and len(disc_dates) > 0:
+                    # Converter para datetime se necessário
+                    eff_dates = pd.to_datetime(eff_dates, errors='coerce').dropna()
+                    disc_dates = pd.to_datetime(disc_dates, errors='coerce').dropna()
+                    
+                    if len(eff_dates) > 0 and len(disc_dates) > 0:
+                        data_min = eff_dates.min()
+                        data_max = disc_dates.max()
+                    else:
+                        # Fallback se não conseguir converter
+                        data_min = datetime.now()
+                        data_max = datetime.now() + timedelta(days=30)
+                else:
+                    # Fallback se não há dados válidos
+                    data_min = datetime.now()
+                    data_max = datetime.now() + timedelta(days=30)
             else:
                 # Fallback para data atual
                 data_min = datetime.now()
@@ -269,8 +287,11 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
             for idx, row in df_sorted.iterrows():
                 try:
                     # Extrair dados básicos
-                    if 'Flight' in row:
-                        numero_voo = str(int(row['Flight'])).strip()
+                    if 'Flight' in row and pd.notna(row['Flight']):
+                        try:
+                            numero_voo = str(int(float(row['Flight']))).strip()
+                        except (ValueError, TypeError):
+                            numero_voo = "001"
                     else:
                         numero_voo = "001"
                     
