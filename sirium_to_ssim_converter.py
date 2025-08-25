@@ -141,6 +141,21 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
         print(f"✅ Arquivo lido: {len(df)} linhas")
         print(f"📋 Colunas: {df.columns.tolist()}")
         
+        # Filtrar apenas linhas válidas (que têm dados de voo)
+        # Remove linhas onde Orig ou Dest são NaN/vazios
+        df_clean = df.dropna(subset=['Orig', 'Dest'])
+        
+        # Remove linhas onde Orig ou Dest são strings vazias
+        df_clean = df_clean[
+            (df_clean['Orig'].astype(str).str.strip() != '') & 
+            (df_clean['Dest'].astype(str).str.strip() != '') &
+            (df_clean['Orig'].astype(str).str.strip() != 'nan') & 
+            (df_clean['Dest'].astype(str).str.strip() != 'nan')
+        ]
+        
+        print(f"🧹 Após limpeza: {len(df_clean)} linhas válidas (removidas {len(df) - len(df_clean)} linhas inválidas)")
+        df = df_clean
+        
         # Filtrar pela companhia aérea selecionada
         airline_col = None
         for col in ['Mkt Al', 'Op Al', 'Airline', 'Carrier']:

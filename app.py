@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import os
 from sirium_to_ssim_converter import gerar_ssim_sirium
+from version import get_version_info
 
 def main():
     st.set_page_config(
@@ -13,8 +14,10 @@ def main():
     )
     
     # Header
+    version_info = get_version_info()
     st.title("✈️ SIRIUM to SSIM Converter")
     st.markdown("**Developed by Capacity Dnata Brasil**")
+    st.markdown(f"*Version {version_info['version']} - {version_info['date']}*")
     st.markdown("---")
     
     st.markdown("""
@@ -323,7 +326,12 @@ def main():
         
         ### 📞 Support:
         Developed by **Capacity Dnata Brasil** for professional airline operations.
-        """)
+        
+        ### 📋 Version Information:
+        - **Version:** {version_info['version']}
+        - **Release Date:** {version_info['date']}
+        - **Latest Changes:** {version_info['notes']}
+        """.format(version_info=get_version_info()))
 
 if __name__ == "__main__":
     main()
