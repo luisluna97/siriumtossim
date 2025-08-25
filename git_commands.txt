@@ -1,0 +1,29 @@
+## Git Commands to Upload SIRIUM to GitHub
+
+Execute these commands in order:
+
+1. git init
+2. git add app.py
+3. git add sirium_to_ssim_converter.py
+4. git add requirements.txt
+5. git add README.md
+6. git add airport.csv
+7. git add "ACT TYPE.xlsx"
+8. git add .streamlit/config.toml
+9. git add .gitignore
+10. git add DEPLOY.md
+11. git commit -m "Initial SIRIUM to SSIM Converter - Professional Airline Operations Tool"
+12. git branch -M main
+13. git remote add origin https://github.com/luisluna97/siriumtossim.git
+14. git push -u origin main
+
+## Alternative: Use GitHub Desktop or VS Code Git integration
+
+## After upload, deploy on Streamlit Cloud:
+1. Go to https://share.streamlit.io/
+2. Connect GitHub account
+3. Select repository: luisluna97/siriumtossim
+4. Main file: app.py
+5. Deploy!
+
+Final URL will be: https://siriumtossim.streamlit.app/

@@ -326,12 +326,11 @@ def main():
         
         ### 📞 Support:
         Developed by **Capacity Dnata Brasil** for professional airline operations.
-        
-        ### 📋 Version Information:
-        """
+        """)
         
         # Add version info separately to avoid formatting issues
         version_info = get_version_info()
+        st.markdown("### 📋 Version Information:")
         st.markdown(f"""
         - **Version:** {version_info['version']}
         - **Release Date:** {version_info['date']}
