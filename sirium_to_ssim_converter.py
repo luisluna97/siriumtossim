@@ -85,8 +85,32 @@ def parse_time_sfo(time_value):
         if hasattr(time_value, 'strftime'):
             return time_value.strftime("%H%M")
         
+        # Se é número (int ou float) - NOVO TRATAMENTO PARA SFO
+        if isinstance(time_value, (int, float)):
+            # Converter para inteiro e formatar como HHMM
+            time_int = int(time_value)
+            
+            # Se é menor que 100, assumir formato HMM (ex: 45 = 00:45)
+            if time_int < 100:
+                return f"{time_int:04d}"
+            
+            # Se tem 3 dígitos, assumir HMM (ex: 235 = 02:35)  
+            elif time_int < 1000:
+                return f"{time_int:04d}"
+            
+            # Se tem 4 dígitos, assumir HHMM (ex: 1730 = 17:30)
+            elif time_int < 2400:
+                return f"{time_int:04d}"
+            
+            else:
+                return "0000"
+        
         # Se é string
         time_str = str(time_value).strip()
+        
+        # Remover .0 se presente (ex: "1730.0" -> "1730")
+        if time_str.endswith('.0'):
+            time_str = time_str[:-2]
         
         # Formato HH:MM
         if ':' in time_str:
@@ -96,13 +120,17 @@ def parse_time_sfo(time_value):
                 minutes = int(float(parts[1]))
                 return f"{hours:02d}{minutes:02d}"
         
-        # Formato HHMM
-        if len(time_str) == 4 and time_str.isdigit():
-            return time_str
-        
-        # Formato HMM
-        if len(time_str) == 3 and time_str.isdigit():
-            return '0' + time_str
+        # Formato numérico como string
+        if time_str.replace('.', '').isdigit():
+            time_int = int(float(time_str))
+            
+            # Aplicar mesma lógica de números
+            if time_int < 100:
+                return f"{time_int:04d}"
+            elif time_int < 1000:
+                return f"{time_int:04d}"
+            elif time_int < 2400:
+                return f"{time_int:04d}"
         
         return "0000"
         

@@ -2,9 +2,9 @@
 SIRIUM Version Management
 """
 
-VERSION = "1.0.0.5"
+VERSION = "1.0.1.0"
 VERSION_DATE = "2025-08-25"
-VERSION_NOTES = "FINAL FIX: Eliminate sorted() error with mixed float/string in airline columns"
+VERSION_NOTES = "FEATURE: Time parsing working perfectly! SFO format (1730 → 17:30) correctly converted to SSIM"
 
 def get_version_info():
     """Return version information"""
