@@ -68,7 +68,18 @@ def main():
             
             if airline_col:
                 # Get available airlines
-                available_airlines = sorted(df[airline_col].unique())
+                # Ultra-safe: evitar erro de sorted() com float/string
+                try:
+                    unique_values = df[airline_col].astype(str)
+                    unique_values = unique_values[
+                        (unique_values != 'nan') & 
+                        (unique_values != '') & 
+                        (unique_values.notna())
+                    ].unique()
+                    available_airlines = sorted([str(x) for x in unique_values if str(x) not in ['nan', '', 'None']])
+                except Exception as e:
+                    st.error(f"⚠️ Erro ao processar companhias: {e}")
+                    available_airlines = [str(x) for x in df[airline_col].dropna().unique()]
                 
                 # Display metrics
                 col1, col2, col3 = st.columns(3)

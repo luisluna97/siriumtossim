@@ -173,8 +173,20 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
                 break
         
         if airline_col:
-            companhias_disponiveis = df[airline_col].unique()
-            print(f"🏢 Companhias disponíveis: {companhias_disponiveis}")
+            # Ultra-safe: evitar erro de sorted() com float/string
+            try:
+                unique_values = df[airline_col].astype(str)
+                unique_values = unique_values[
+                    (unique_values != 'nan') & 
+                    (unique_values != '') & 
+                    (unique_values.notna())
+                ].unique()
+                companhias_disponiveis = sorted([str(x) for x in unique_values if str(x) not in ['nan', '', 'None']])
+                print(f"🏢 Companhias disponíveis: {companhias_disponiveis}")
+            except Exception as e:
+                print(f"⚠️  Erro ao listar companhias, usando valores brutos: {e}")
+                companhias_disponiveis = df[airline_col].unique()
+                print(f"🏢 Companhias disponíveis (bruto): {companhias_disponiveis}")
             
             df_filtered = df[df[airline_col] == codigo_iata_selecionado]
             
