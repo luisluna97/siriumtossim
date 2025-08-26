@@ -1,10 +1,10 @@
 """
-SIRIUM Version Management
+CIRUIM Version Management
 """
 
-VERSION = "1.0.1.0"
+VERSION = "1.0.1.1"
 VERSION_DATE = "2025-08-25"
-VERSION_NOTES = "FEATURE: Time parsing working perfectly! SFO format (1730 → 17:30) correctly converted to SSIM"
+VERSION_NOTES = "REBRAND: SIRIUM → CIRUIM! 😂 (Time parsing still working perfectly)"
 
 def get_version_info():
     """Return version information"""

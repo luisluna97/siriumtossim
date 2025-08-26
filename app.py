@@ -7,7 +7,7 @@ from version import get_version_info
 
 def main():
     st.set_page_config(
-        page_title="SIRIUM to SSIM Converter - Dnata Brasil", 
+        page_title="CIRUIM to SSIM Converter - Dnata Brasil", 
         page_icon="✈️",
         layout="wide",
         initial_sidebar_state="collapsed"
@@ -15,15 +15,15 @@ def main():
     
     # Header
     version_info = get_version_info()
-    st.title("✈️ SIRIUM to SSIM Converter")
+    st.title("✈️ CIRUIM to SSIM Converter")
     st.markdown("**Developed by Capacity Dnata Brasil**")
     st.markdown(f"*Version {version_info['version']} - {version_info['date']}*")
     st.markdown("---")
     
     st.markdown("""
-    ### 📋 About SIRIUM Converter
+    ### 📋 About CIRUIM Converter
     
-    This converter transforms airline schedules from **SIRIUM format** (based on SFO Schedule Extract Reports) 
+    This converter transforms airline schedules from **CIRUIM format** (based on SFO Schedule Extract Reports) 
     to **SSIM** (Standard Schedules Information Manual) format.
     
     **Key Features:**
@@ -40,9 +40,9 @@ def main():
     # File Upload Section
     st.subheader("📁 Upload Schedule File")
     uploaded_file = st.file_uploader(
-        "Select Excel file with SIRIUM schedule:",
+        "Select Excel file with CIRUIM schedule:",
         type=['xlsx', 'xls'],
-        help="Upload Excel file containing schedule in SIRIUM format (header on row 5)"
+        help="Upload Excel file containing schedule in CIRUIM format (header on row 5)"
     )
     
     if uploaded_file is not None:
@@ -308,14 +308,14 @@ def main():
         st.markdown("""
         ### 📖 How to use:
         
-        1. **Upload**: Upload your Excel file with SIRIUM schedule
+        1. **Upload**: Upload your Excel file with CIRUIM schedule
         2. **Preview**: Review available airlines and data
         3. **Select**: Choose the airline for conversion
         4. **Convert**: Click "Convert to SSIM"
         5. **Validate**: Check the SSIM structure
         6. **Download**: Download the generated SSIM file
         
-        ### 📋 Expected SIRIUM Format:
+        ### 📋 Expected CIRUIM Format:
         
         The file must contain these columns (starting from row 5):
         - `Mkt Al` or `Op Al`: Airline code (2 letters)

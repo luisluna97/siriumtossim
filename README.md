@@ -1,10 +1,10 @@
-# ✈️ SIRIUM to SSIM Converter
+# ✈️ CIRUIM to SSIM Converter
 
 **Professional airline schedule converter developed by Capacity Dnata Brasil**
 
 ## 🎯 Overview
 
-SIRIUM is a powerful converter that transforms airline schedules from SIRIUM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
+CIRUIM is a powerful converter that transforms airline schedules from CIRUIM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
 
 ## ✨ Key Features
 
@@ -107,7 +107,7 @@ pip install -r requirements.txt
 
 ## 🎮 How to Use
 
-1. **Upload** your Excel file with SIRIUM schedule
+1. **Upload** your Excel file with CIRUIM schedule
 2. **Preview** available airlines and data structure
 3. **Select** the specific airline for conversion
 4. **Convert** to SSIM format with validation
@@ -127,9 +127,9 @@ Developed by **Capacity Dnata Brasil** for professional airline operations.
 
 For technical support or questions, please contact the development team.
 
-## 🏆 Why SIRIUM?
+## 🏆 Why CIRUIM?
 
-SIRIUM combines the best of both worlds:
+CIRUIM combines the best of both worlds:
 - ✅ **Reliability** of proven SSIM standards
 - ✅ **Flexibility** of modern file processing
 - ✅ **Validation** with real-time feedback
