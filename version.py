@@ -2,9 +2,9 @@
 CIRUIM Version Management
 """
 
-VERSION = "1.1.0"
-VERSION_DATE = "2025-01-27"
-VERSION_NOTES = "🔧 MAJOR UPDATES: Fixed date operation period in line 3 (Eff Date to Disc Date) + All Companies option + 50-line preview"
+VERSION = "1.1.1"
+VERSION_DATE = "2025-08-03"
+VERSION_NOTES = "🔧 FIXED: All Companies now generates single SSIM file + Filtered invalid airline codes + Professional design"
 
 def get_version_info():
     """Return version information"""

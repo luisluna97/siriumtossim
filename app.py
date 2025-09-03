@@ -13,20 +13,68 @@ def main():
         initial_sidebar_state="collapsed"
     )
     
+    # CSS customizado para design mais profissional
+    st.markdown("""
+    <style>
+    .main > div {
+        padding-top: 2rem;
+    }
+    .stMetric {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    .stSelectbox > div > div {
+        background-color: #ffffff;
+        border: 2px solid #1f77b4;
+        border-radius: 0.5rem;
+    }
+    .stButton > button {
+        background-color: #1f77b4;
+        color: white;
+        border-radius: 0.5rem;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    .stButton > button:hover {
+        background-color: #0d5aa7;
+    }
+    .stInfo {
+        background-color: #e3f2fd;
+        border-left: 4px solid #1f77b4;
+    }
+    .stSuccess {
+        background-color: #e8f5e8;
+        border-left: 4px solid #4caf50;
+    }
+    .stError {
+        background-color: #ffebee;
+        border-left: 4px solid #f44336;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Header compacto
     version_info = get_version_info()
     
-    col1, col2 = st.columns([3, 1])
+    # Header profissional
+    st.markdown("""
+    <div style="background: linear-gradient(90deg, #1f77b4 0%, #0d5aa7 100%); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem;">
+        <h1 style="color: white; margin: 0; font-size: 2.5rem; font-weight: 700;">✈️ CIRUIM to SSIM Converter</h1>
+        <p style="color: #e3f2fd; margin: 0.5rem 0 0 0; font-size: 1.1rem; font-weight: 500;">Professional Airline Schedule Converter • Capacity Dnata Brasil</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Barra de informações
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.title("✈️ CIRUIM to SSIM Converter")
-        st.markdown("**Developed by Capacity Dnata Brasil**")
-    
+        st.markdown("**Transform CIRUIM schedules to IATA SSIM format**")
     with col2:
-        st.markdown("### 🔗 Links")
-        st.markdown("[📱 GitHub](https://github.com/luisluna97/siriumtossim)")
-        st.markdown(f"**v{version_info['version']}** • {version_info['date']}")
-    
-    st.markdown("---")
+        st.markdown(f"**Version {version_info['version']}** • {version_info['date']}")
+    with col3:
+        st.markdown("[📱 **GitHub Repository**](https://github.com/luisluna97/siriumtossim)")
     
     # File Upload Section
     st.subheader("📁 Upload Schedule File")
@@ -58,8 +106,7 @@ def main():
                     break
             
             if airline_col:
-                # Get available airlines
-                # Ultra-safe: evitar erro de sorted() com float/string
+                # Get available airlines (filtrar apenas códigos IATA válidos)
                 try:
                     unique_values = df[airline_col].astype(str)
                     unique_values = unique_values[
@@ -67,56 +114,99 @@ def main():
                         (unique_values != '') & 
                         (unique_values.notna())
                     ].unique()
-                    available_airlines = sorted([str(x) for x in unique_values if str(x) not in ['nan', '', 'None']])
+                    
+                    # Filtrar apenas códigos IATA válidos (2 caracteres, letras)
+                    available_airlines = []
+                    for x in unique_values:
+                        x_str = str(x).strip().upper()
+                        if (len(x_str) == 2 and 
+                            x_str.isalpha() and 
+                            x_str not in ['nan', '', 'None', 'NA'] and
+                            'Schedule' not in x_str and
+                            'Extract' not in x_str and
+                            'Report' not in x_str):
+                            available_airlines.append(x_str)
+                    
+                    available_airlines = sorted(available_airlines)
                 except Exception as e:
                     st.error(f"⚠️ Erro ao processar companhias: {e}")
                     available_airlines = [str(x) for x in df[airline_col].dropna().unique()]
                 
-                # Display metrics
+                # Métricas profissionais
+                st.markdown("### 📊 Data Overview")
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("📊 Total Records", len(df))
+                    st.metric(
+                        label="📊 Total Records", 
+                        value=f"{len(df):,}",
+                        help="Total number of schedule records in file"
+                    )
                 with col2:
-                    st.metric("🏢 Airlines Available", len(available_airlines))
+                    st.metric(
+                        label="🏢 Airlines Available", 
+                        value=len(available_airlines),
+                        help="Number of valid airline codes found"
+                    )
                 with col3:
                     if 'Flight' in df.columns:
-                        st.metric("✈️ Total Flights", df['Flight'].nunique())
+                        unique_flights = df['Flight'].nunique()
+                        st.metric(
+                            label="✈️ Unique Flights", 
+                            value=f"{unique_flights:,}",
+                            help="Number of unique flight numbers"
+                        )
                     else:
-                        st.metric("✈️ Records", len(df))
+                        st.metric(label="✈️ Flight Records", value=f"{len(df):,}")
                 
-                # Show available airlines
-                st.subheader("🏢 Available Airlines")
-                airline_cols = st.columns(min(len(available_airlines), 5))
-                for i, airline in enumerate(available_airlines):
-                    with airline_cols[i % 5]:
-                        airline_count = len(df[df[airline_col] == airline])
-                        st.info(f"**{airline}**\n{airline_count} flights")
+                # Airlines disponíveis em formato mais profissional
+                st.markdown("### 🏢 Available Airlines")
                 
-                # Airline Selection
+                # Criar grid de airlines
+                airlines_per_row = 6
+                airline_rows = [available_airlines[i:i+airlines_per_row] for i in range(0, len(available_airlines), airlines_per_row)]
+                
+                for row in airline_rows:
+                    cols = st.columns(len(row))
+                    for i, airline in enumerate(row):
+                        with cols[i]:
+                            airline_count = len(df[df[airline_col] == airline])
+                            st.markdown(f"""
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 1rem; text-align: center; margin: 0.25rem 0;">
+                                <h4 style="margin: 0; color: #1f77b4; font-size: 1.2rem;">{airline}</h4>
+                                <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">{airline_count:,} flights</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                
+                # Seção de conversão profissional
                 st.markdown("---")
-                st.subheader("⚙️ Conversion Settings")
+                st.markdown("### ⚙️ Conversion Settings")
                 
-                col1, col2 = st.columns(2)
+                # Layout melhorado para configurações
+                col1, col2 = st.columns([2, 1])
                 
                 with col1:
+                    st.markdown("**Select Conversion Mode:**")
                     # Adicionar opção "All Companies"
                     airline_options = ["ALL_COMPANIES"] + available_airlines
-                    airline_labels = ["🌍 All Companies"] + [f"✈️ {airline}" for airline in available_airlines]
+                    airline_labels = ["🌍 All Companies (Single SSIM File)"] + [f"✈️ {airline}" for airline in available_airlines]
                     
                     selected_option = st.selectbox(
-                        "Select Conversion Option:",
+                        "Conversion Option:",
                         options=airline_options,
                         format_func=lambda x: airline_labels[airline_options.index(x)],
-                        help="Choose specific airline or all companies in one file"
+                        help="Choose specific airline or process all companies in one SSIM file",
+                        label_visibility="collapsed"
                     )
                     
                     selected_airline = selected_option
                 
                 with col2:
+                    st.markdown("**Custom Filename (Optional):**")
                     output_filename = st.text_input(
-                        "Output filename (optional):",
-                        placeholder="Auto-generated if empty",
-                        help="Leave empty for automatic naming"
+                        "Output filename:",
+                        placeholder="Auto-generated",
+                        help="Leave empty for automatic naming based on selection",
+                        label_visibility="collapsed"
                     )
                 
                 # Filter data by selected airline
@@ -338,16 +428,20 @@ def main():
             """)
     
     with col2:
-        with st.expander("📋 Version Updates"):
+        with st.expander("📋 Release Notes"):
             version_info = get_version_info()
             st.markdown(f"""
-            **v{version_info['version']}** - {version_info['date']}
-            
+            ### v{version_info['version']} - {version_info['date']}
             {version_info['notes']}
             
-            **Previous versions:**
-            - v1.0.1.1 - SIRIUM → CIRUIM rebrand
-            - v1.0.0 - Initial release
+            ### v1.1.0 - 2025-08-03
+            🔧 Fixed date operation periods + All Companies mode + Enhanced preview
+            
+            ### v1.0.1.1 - 2025-08-25  
+            🎭 SIRIUM → CIRUIM rebrand
+            
+            ### v1.0.0
+            🚀 Initial release
             """)
 
 if __name__ == "__main__":

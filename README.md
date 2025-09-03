@@ -138,7 +138,13 @@ CIRUIM combines the best of both worlds:
 
 ## 📈 Version History
 
-### v1.1.0 (2025-01-27) - Major Updates
+### v1.1.1 (2025-08-03) - Professional Update
+- 🔧 **FIXED**: All Companies now generates single SSIM file (not concatenated files)
+- 🧹 **FIXED**: Filtered invalid airline codes (removes "Schedule Extract Report..." text)
+- 🎨 **Professional Design**: Enhanced UI with gradient headers and improved styling
+- 📋 **Release Notes**: Added comprehensive version history section
+
+### v1.1.0 (2025-08-03) - Major Updates  
 - 🔧 **Fixed Date Operation Period**: Flight lines (type 3) now use correct Eff Date to Disc Date periods
 - 🌍 **All Companies Mode**: Generate SSIM with all airlines in single file
 - 👀 **Enhanced Preview**: Increased preview from 8 to 50 lines

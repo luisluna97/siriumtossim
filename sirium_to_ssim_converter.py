@@ -182,7 +182,7 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
         print(f"🧹 Limpeza concluída: {len(df_clean)} linhas válidas")
         df = df_clean
         
-        # Obter todas as companhias
+        # Obter todas as companhias (filtrar textos inválidos)
         airline_col = None
         for col in ['Mkt Al', 'Op Al', 'Airline', 'Carrier']:
             if col in df.columns:
@@ -199,8 +199,21 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
             (unique_values != '') & 
             (unique_values.notna())
         ].unique()
-        todas_companias = sorted([str(x) for x in unique_values if str(x) not in ['nan', '', 'None']])
-        print(f"🏢 Processando companhias: {todas_companias}")
+        
+        # Filtrar apenas códigos IATA válidos (2 caracteres, letras)
+        todas_companias = []
+        for x in unique_values:
+            x_str = str(x).strip().upper()
+            if (len(x_str) == 2 and 
+                x_str.isalpha() and 
+                x_str not in ['nan', '', 'None', 'NA'] and
+                'Schedule' not in x_str and
+                'Extract' not in x_str and
+                'Report' not in x_str):
+                todas_companias.append(x_str)
+        
+        todas_companias = sorted(todas_companias)
+        print(f"🏢 Processando companhias válidas: {todas_companias}")
         
         # Determinar período global
         data_min = datetime.now()
@@ -274,11 +287,11 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
             print(f"⚠️ Erro ao carregar aeroportos: {e}")
             iata_to_timezone = {}
         
-        # Gerar arquivo SSIM com TODAS as companhias
+        # Gerar arquivo SSIM ÚNICO com TODAS as companhias
         with open(output_file, 'w') as file:
             numero_linha = 1
             
-            # Linha 1
+            # UM ÚNICO HEADER para todas as companhias
             numero_linha_str = f"{numero_linha:08}"
             linha_1_conteudo = "1AIRLINE STANDARD SCHEDULE DATA SET"
             espacos_necessarios = 200 - len(linha_1_conteudo) - len(numero_linha_str)
@@ -292,6 +305,27 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                 file.write(zeros_line + "\n")
                 numero_linha += 1
             
+            # UM ÚNICO CARRIER RECORD para "ALL" 
+            linha_2_conteudo = f"2UALL 0008    {data_min_str}{data_max_str}{data_emissao}Created by Capacity Dnata Brasil"
+            posicao_p = 72
+            espacos_antes_p = posicao_p - len(linha_2_conteudo) - 1
+            linha_2 = linha_2_conteudo + (' ' * espacos_antes_p) + 'P'
+            
+            numero_linha_str = f" EN08{numero_linha:08}"
+            espacos_restantes = 200 - len(linha_2) - len(numero_linha_str)
+            linha_2 += (' ' * espacos_restantes) + numero_linha_str
+            file.write(linha_2 + "\n")
+            numero_linha += 1
+            
+            # 4 linhas de zeros
+            for _ in range(4):
+                zeros_line = "0" * 200
+                file.write(zeros_line + "\n")
+                numero_linha += 1
+            
+            # TODAS as linhas de voo de TODAS as companhias juntas
+            flight_date_counter = {}
+            
             # Processar cada companhia
             for companhia in todas_companias:
                 print(f"🔄 Processando companhia: {companhia}")
@@ -300,27 +334,7 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                 if len(df_companhia) == 0:
                     continue
                 
-                # Linha 2 para esta companhia
-                linha_2_conteudo = f"2U{companhia}  0008    {data_min_str}{data_max_str}{data_emissao}Created by Capacity Dnata Brasil"
-                posicao_p = 72
-                espacos_antes_p = posicao_p - len(linha_2_conteudo) - 1
-                linha_2 = linha_2_conteudo + (' ' * espacos_antes_p) + 'P'
-                
-                numero_linha_str = f" EN08{numero_linha:08}"
-                espacos_restantes = 200 - len(linha_2) - len(numero_linha_str)
-                linha_2 += (' ' * espacos_restantes) + numero_linha_str
-                file.write(linha_2 + "\n")
-                numero_linha += 1
-                
-                # 4 linhas de zeros
-                for _ in range(4):
-                    zeros_line = "0" * 200
-                    file.write(zeros_line + "\n")
-                    numero_linha += 1
-                
                 # Processar voos desta companhia
-                flight_date_counter = {}
-                
                 try:
                     if 'Flight' in df_companhia.columns:
                         df_companhia['Flight_num'] = pd.to_numeric(df_companhia['Flight'], errors='coerce')
@@ -336,7 +350,7 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                     print(f"⚠️ Erro ao ordenar dados para {companhia}: {e}")
                     df_sorted = df_companhia
                 
-                # Linhas 3 - voos desta companhia
+                # Linhas 3 - voos desta companhia (SEM headers/footers separados)
                 for idx, row in df_sorted.iterrows():
                     try:
                         # Extrair dados básicos
@@ -386,7 +400,7 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                         origem_timezone_formatted = format_timezone_offset(str(origem_timezone_offset))
                         destino_timezone_formatted = format_timezone_offset(str(destino_timezone_offset))
                         
-                        # Lógica de date_counter
+                        # Lógica de date_counter (global para todas as companhias)
                         voo_key = f"{companhia}_{numero_voo}"
                         if voo_key not in flight_date_counter:
                             flight_date_counter[voo_key] = 0
@@ -440,22 +454,23 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                         print(f"⚠️ Erro ao processar linha {idx} da companhia {companhia}: {e}")
                         continue
                 
-                # 4 linhas de zeros após cada companhia
-                for _ in range(4):
-                    zeros_line = "0" * 200
-                    file.write(zeros_line + "\n")
-                    numero_linha += 1
-                
-                # Footer para esta companhia
-                numero_linha_str = f"{numero_linha + 1:06}"
-                linha_5_conteudo = f"5 {companhia} {data_emissao}"
-                numero_linha_str2 = f"{numero_linha:06}E"
-                espacos_necessarios = 200 - len(linha_5_conteudo) - len(numero_linha_str) - len(numero_linha_str2)
-                linha_5 = linha_5_conteudo + (' ' * espacos_necessarios) + numero_linha_str2 + numero_linha_str
-                file.write(linha_5 + "\n")
-                numero_linha += 1
-                
                 print(f"✅ Companhia {companhia} processada: {len(df_companhia)} voos")
+            
+            # UM ÚNICO FOOTER no final para todas as companhias
+            # 4 linhas de zeros finais
+            for _ in range(4):
+                zeros_line = "0" * 200
+                file.write(zeros_line + "\n")
+                numero_linha += 1
+            
+            # Footer único para ALL
+            numero_linha_str = f"{numero_linha + 1:06}"
+            linha_5_conteudo = f"5 ALL {data_emissao}"
+            numero_linha_str2 = f"{numero_linha:06}E"
+            espacos_necessarios = 200 - len(linha_5_conteudo) - len(numero_linha_str) - len(numero_linha_str2)
+            linha_5 = linha_5_conteudo + (' ' * espacos_necessarios) + numero_linha_str2 + numero_linha_str
+            file.write(linha_5 + "\n")
+            numero_linha += 1
         
         print(f"✅ Arquivo SSIM TODAS COMPANHIAS gerado: {output_file}")
         print(f"📊 Total de linhas: {numero_linha}")
@@ -515,7 +530,7 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
                 break
         
         if airline_col:
-            # Ultra-safe: evitar erro de sorted() com float/string
+            # Filtrar apenas códigos IATA válidos
             try:
                 unique_values = df[airline_col].astype(str)
                 unique_values = unique_values[
@@ -523,8 +538,21 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
                     (unique_values != '') & 
                     (unique_values.notna())
                 ].unique()
-                companhias_disponiveis = sorted([str(x) for x in unique_values if str(x) not in ['nan', '', 'None']])
-                print(f"🏢 Companhias disponíveis: {companhias_disponiveis}")
+                
+                # Filtrar apenas códigos IATA válidos (2 caracteres, letras)
+                companhias_disponiveis = []
+                for x in unique_values:
+                    x_str = str(x).strip().upper()
+                    if (len(x_str) == 2 and 
+                        x_str.isalpha() and 
+                        x_str not in ['nan', '', 'None', 'NA'] and
+                        'Schedule' not in x_str and
+                        'Extract' not in x_str and
+                        'Report' not in x_str):
+                        companhias_disponiveis.append(x_str)
+                
+                companhias_disponiveis = sorted(companhias_disponiveis)
+                print(f"🏢 Companhias válidas disponíveis: {companhias_disponiveis}")
             except Exception as e:
                 print(f"⚠️  Erro ao listar companhias, usando valores brutos: {e}")
                 companhias_disponiveis = df[airline_col].unique()
