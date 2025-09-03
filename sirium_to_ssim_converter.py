@@ -140,20 +140,51 @@ def parse_time_sfo(time_value):
 
 def get_aircraft_type_sfo(equipment=None):
     """Obtém tipo de aeronave - usar código IATA se disponível"""
-    if pd.isna(equipment):
+    if pd.isna(equipment) or equipment == 'N/A':
         return "320"  # Default
     
     equipment = str(equipment).strip().upper()
     
-    # Mapeamento comum de códigos (baseado no old_project)
+    # Se está vazio ou é N/A, usar default
+    if equipment in ['', 'N/A', 'NAN', 'NONE']:
+        return "320"
+    
+    # Mapeamento comum de códigos (expandido com códigos reais do CIRIUM)
     aircraft_map = {
+        # Airbus
         'A320': '320', 'A321': '321', 'A330': '330', 'A350': '350',
-        'B737': '737', 'B777': '777', 'B787': '787',
+        'A319': '319', 'A380': '380', 'A340': '340',
+        # Boeing
+        'B737': '737', 'B777': '777', 'B787': '787', 'B747': '747',
+        'B767': '767', 'B757': '757', 'B717': '717',
+        # Códigos diretos
         '777': '777', '787': '787', '320': '320', '321': '321',
-        '330': '330', '350': '350'
+        '330': '330', '350': '350', '319': '319', '380': '380',
+        '737': '737', '747': '747', '767': '767', '757': '757',
+        # Códigos específicos do CIRIUM (baseado nos dados reais)
+        '388': '388', '359': '359', '332': '332', '333': '333', '789': '789',
+        '77X': '77X', '77W': '77W', '74Y': '74Y',
+        # Embraer
+        'E190': '190', 'E170': '170', 'E175': '175', 'E195': '195',
+        # Outros
+        'ATR72': 'AT7', 'ATR42': 'AT4', 'CRJ900': 'CR9', 'CRJ700': 'CR7'
     }
     
-    return aircraft_map.get(equipment, equipment[:3])
+    # Tentar mapeamento direto primeiro
+    if equipment in aircraft_map:
+        return aircraft_map[equipment]
+    
+    # Se tem números, tentar extrair (ex: "A320-200" -> "320")
+    import re
+    match = re.search(r'(\d{3})', equipment)
+    if match:
+        return match.group(1)
+    
+    # Fallback: primeiros 3 caracteres ou default
+    if len(equipment) >= 3:
+        return equipment[:3]
+    else:
+        return "320"
 
 def gerar_ssim_todas_companias(excel_path, output_file=None):
     """
@@ -390,8 +421,8 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                         partida = parse_time_sfo(dep_time)
                         chegada = parse_time_sfo(arr_time)
                         
-                        # Equipamento
-                        equipment = row.get('Equipment', 'A320')
+                        # Equipamento (usar coluna Equip se disponível)
+                        equipment = row.get('Equip', row.get('Equipment', 'A320'))
                         equipamento = get_aircraft_type_sfo(equipment)
                         
                         # Timezone offsets
@@ -776,8 +807,8 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
                     partida = parse_time_sfo(dep_time)
                     chegada = parse_time_sfo(arr_time)
                     
-                    # Equipamento
-                    equipment = row.get('Equipment', 'A320')
+                    # Equipamento (usar coluna Equip se disponível)
+                    equipment = row.get('Equip', row.get('Equipment', 'A320'))
                     equipamento = get_aircraft_type_sfo(equipment)
                     
                     # Timezone offsets (usar mapeamento se disponível)
