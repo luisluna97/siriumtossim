@@ -7,7 +7,7 @@ from version import get_version_info
 
 def main():
     st.set_page_config(
-        page_title="CIRUIM to SSIM Converter - Dnata Brasil", 
+        page_title="CIRIUM to SSIM Converter - Dnata Brasil", 
         page_icon="✈️",
         layout="wide",
         initial_sidebar_state="collapsed"
@@ -62,26 +62,58 @@ def main():
     # Header profissional
     st.markdown("""
     <div style="background: linear-gradient(90deg, #1f77b4 0%, #0d5aa7 100%); padding: 2rem; border-radius: 1rem; margin-bottom: 2rem;">
-        <h1 style="color: white; margin: 0; font-size: 2.5rem; font-weight: 700;">✈️ CIRUIM to SSIM Converter</h1>
-        <p style="color: #e3f2fd; margin: 0.5rem 0 0 0; font-size: 1.1rem; font-weight: 500;">Professional Airline Schedule Converter • Capacity Dnata Brasil</p>
+        <h1 style="color: white; margin: 0; font-size: 2.5rem; font-weight: 700;">✈️ CIRIUM to SSIM Converter</h1>
+        <p style="color: #e3f2fd; margin: 0.5rem 0 0 0; font-size: 1.1rem; font-weight: 500;">Cirium Airline Schedule Converter • Capacity Dnata Brasil</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Barra de informações
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.markdown("**Transform CIRUIM schedules to IATA SSIM format**")
+        st.markdown("**Transform CIRIUM schedules to IATA SSIM format**")
     with col2:
         st.markdown(f"**Version {version_info['version']}** • {version_info['date']}")
     with col3:
         st.markdown("[📱 **GitHub Repository**](https://github.com/luisluna97/siriumtossim)")
     
+    # Help e Release Notes fixos na parte superior
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        with st.expander("❓ Help & Format Info"):
+            st.markdown("""
+            **📖 How to use:** Upload Excel → Select airline/All Companies → Convert → Download
+            
+            **📋 Required columns (row 5):** `Mkt Al/Op Al`, `Orig`, `Dest`, `Flight`, `Eff Date`, `Disc Date`, `Op Days`
+            
+            **🔧 Output:** IATA-standard SSIM files with 200-character lines
+            """)
+    
+    with col2:
+        with st.expander("📋 Release Notes"):
+            version_info = get_version_info()
+            st.markdown(f"""
+            ### v{version_info['version']} - {version_info['date']}
+            {version_info['notes']}
+            
+            ### v1.1.0 - 2025-08-03
+            🔧 Fixed date operation periods + All Companies mode + Enhanced preview
+            
+            ### v1.0.1.1 - 2025-08-25  
+            🎭 SIRIUM → CIRIUM rebrand
+            
+            ### v1.0.0
+            🚀 Initial release
+            """)
+    
+    st.markdown("---")
+    
     # File Upload Section
     st.subheader("📁 Upload Schedule File")
     uploaded_file = st.file_uploader(
-        "Select Excel file with CIRUIM schedule:",
+        "Select Excel file with CIRIUM schedule:",
         type=['xlsx', 'xls'],
-        help="Upload Excel file containing schedule in CIRUIM format (header on row 5)"
+        help="Upload Excel file containing schedule in CIRIUM format (header on row 5)"
     )
     
     if uploaded_file is not None:
@@ -412,37 +444,7 @@ def main():
             if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
     
-    # Footer compacto
-    st.markdown("---")
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        with st.expander("❓ Help & Format Info"):
-            st.markdown("""
-            **📖 How to use:** Upload Excel → Select airline/All Companies → Convert → Download
-            
-            **📋 Required columns (row 5):** `Mkt Al/Op Al`, `Orig`, `Dest`, `Flight`, `Eff Date`, `Disc Date`, `Op Days`
-            
-            **🔧 Output:** IATA-standard SSIM files with 200-character lines
-            """)
-    
-    with col2:
-        with st.expander("📋 Release Notes"):
-            version_info = get_version_info()
-            st.markdown(f"""
-            ### v{version_info['version']} - {version_info['date']}
-            {version_info['notes']}
-            
-            ### v1.1.0 - 2025-08-03
-            🔧 Fixed date operation periods + All Companies mode + Enhanced preview
-            
-            ### v1.0.1.1 - 2025-08-25  
-            🎭 SIRIUM → CIRUIM rebrand
-            
-            ### v1.0.0
-            🚀 Initial release
-            """)
+
 
 if __name__ == "__main__":
     main()

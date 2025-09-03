@@ -4,7 +4,7 @@
 
 ## 🎯 Overview
 
-CIRIUM is converter that transforms airline schedules from CIRUIM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
+CIRIUM is a converter that transforms airline schedules from CIRIUM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
 
 ## ✨ Key Features
 
@@ -108,7 +108,7 @@ pip install -r requirements.txt
 
 ## 🎮 How to Use
 
-1. **Upload** your Excel file with CIRUIM schedule
+1. **Upload** your Excel file with CIRIUM schedule
 2. **Preview** available airlines and data structure
 3. **Select** the specific airline for conversion
 4. **Convert** to SSIM format with validation
