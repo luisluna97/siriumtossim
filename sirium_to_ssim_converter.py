@@ -201,6 +201,322 @@ def get_aircraft_type_sfo(equipment=None):
     else:
         return "320"
 
+def gerar_ssim_multiplas_companias(excel_path, companias_selecionadas, output_file=None):
+    """
+    Gera arquivo SSIM com companhias específicas selecionadas
+    """
+    try:
+        print(f"🔄 GERANDO SSIM PARA COMPANHIAS SELECIONADAS: {', '.join(companias_selecionadas)}")
+        print("=" * 60)
+        
+        # Ler o arquivo Excel CIRIUM (header na linha 5)
+        df = pd.read_excel(excel_path, header=4)
+        print(f"✅ Arquivo lido: {len(df)} linhas")
+        
+        # Filtrar apenas linhas válidas
+        df_clean = df.dropna(subset=['Orig', 'Dest'])
+        df_clean = df_clean[
+            (df_clean['Orig'].astype(str).str.strip() != '') & 
+            (df_clean['Dest'].astype(str).str.strip() != '') &
+            (df_clean['Orig'].astype(str).str.strip() != 'nan') & 
+            (df_clean['Dest'].astype(str).str.strip() != 'nan')
+        ]
+        
+        if 'Flight' in df_clean.columns:
+            df_clean = df_clean[pd.to_numeric(df_clean['Flight'], errors='coerce').notna()]
+        
+        print(f"🧹 Limpeza concluída: {len(df_clean)} linhas válidas")
+        df = df_clean
+        
+        # Filtrar apenas companhias selecionadas
+        airline_col = None
+        for col in ['Mkt Al', 'Op Al', 'Airline', 'Carrier']:
+            if col in df.columns:
+                airline_col = col
+                break
+        
+        if not airline_col:
+            print("❌ Coluna de companhia aérea não encontrada")
+            return None
+            
+        # Filtrar dados para as companhias selecionadas
+        df = df[df[airline_col].isin(companias_selecionadas)]
+        print(f"✅ Dados filtrados para {len(companias_selecionadas)} companhias: {len(df)} voos")
+        
+        # Determinar período global
+        data_min = datetime.now()
+        data_max = datetime.now() + timedelta(days=30)
+        
+        if 'Eff Date' in df.columns and 'Disc Date' in df.columns:
+            try:
+                eff_dates_str = df['Eff Date'].astype(str)
+                disc_dates_str = df['Disc Date'].astype(str)
+                
+                eff_dates_valid = eff_dates_str[
+                    (eff_dates_str != 'nan') & 
+                    (eff_dates_str != '') & 
+                    (eff_dates_str.notna())
+                ]
+                
+                disc_dates_valid = disc_dates_str[
+                    (disc_dates_str != 'nan') & 
+                    (disc_dates_str != '') & 
+                    (disc_dates_str.notna())
+                ]
+                
+                if len(eff_dates_valid) > 0 and len(disc_dates_valid) > 0:
+                    eff_dt_list = []
+                    for date_str in eff_dates_valid:
+                        try:
+                            dt = pd.to_datetime(date_str, errors='coerce')
+                            if pd.notna(dt):
+                                eff_dt_list.append(dt)
+                        except:
+                            continue
+                    
+                    disc_dt_list = []
+                    for date_str in disc_dates_valid:
+                        try:
+                            dt = pd.to_datetime(date_str, errors='coerce')
+                            if pd.notna(dt):
+                                disc_dt_list.append(dt)
+                        except:
+                            continue
+                    
+                    if eff_dt_list and disc_dt_list:
+                        data_min = min(eff_dt_list)
+                        data_max = max(disc_dt_list)
+                        print(f"✅ Período global: {data_min.date()} a {data_max.date()}")
+            except Exception as e:
+                print(f"⚠️ Erro ao processar datas globais: {e}")
+        
+        data_min_str = parse_date_sfo(data_min)
+        data_max_str = parse_date_sfo(data_max)
+        data_emissao = datetime.now().strftime("%d%b%y").upper()
+        data_emissao2 = datetime.now().strftime("%Y%m%d")
+        
+        # Nome do arquivo de saída
+        if output_file is None:
+            airlines_str = "_".join(companias_selecionadas)
+            output_file = f"MULTIPLE_{airlines_str}_{data_emissao2}_{data_min_str}-{data_max_str}.ssim"
+        
+        print(f"📝 Gerando arquivo: {output_file}")
+        
+        # Carregar arquivos de apoio
+        try:
+            airport_df = pd.read_csv('airport.csv')
+            airport_df['ICAO'] = airport_df['ICAO'].str.strip().str.upper()
+            airport_df['IATA'] = airport_df['IATA'].str.strip().str.upper()
+            airport_df['Timezone'] = airport_df['Timezone'].replace('\\N', '0')
+            airport_df['Timezone'] = airport_df['Timezone'].astype(float)
+            
+            iata_to_timezone = dict(zip(airport_df['IATA'], airport_df['Timezone']))
+            print(f"✅ Aeroportos carregados: {len(airport_df)}")
+        except Exception as e:
+            print(f"⚠️ Erro ao carregar aeroportos: {e}")
+            iata_to_timezone = {}
+        
+        # Gerar arquivo SSIM ÚNICO com companhias selecionadas
+        with open(output_file, 'w') as file:
+            numero_linha = 1
+            
+            # UM ÚNICO HEADER
+            numero_linha_str = f"{numero_linha:08}"
+            linha_1_conteudo = "1AIRLINE STANDARD SCHEDULE DATA SET"
+            espacos_necessarios = 200 - len(linha_1_conteudo) - len(numero_linha_str)
+            linha_1 = linha_1_conteudo + (' ' * espacos_necessarios) + numero_linha_str
+            file.write(linha_1 + "\n")
+            numero_linha += 1
+            
+            # 4 linhas de zeros
+            for _ in range(4):
+                zeros_line = "0" * 200
+                file.write(zeros_line + "\n")
+                numero_linha += 1
+            
+            # UM ÚNICO CARRIER RECORD para múltiplas companhias
+            airlines_code = "MIX" if len(companias_selecionadas) > 1 else companias_selecionadas[0]
+            linha_2_conteudo = f"2U{airlines_code}  0008    {data_min_str}{data_max_str}{data_emissao}Created by Capacity Dnata Brasil"
+            posicao_p = 72
+            espacos_antes_p = posicao_p - len(linha_2_conteudo) - 1
+            linha_2 = linha_2_conteudo + (' ' * espacos_antes_p) + 'P'
+            
+            numero_linha_str = f" EN08{numero_linha:08}"
+            espacos_restantes = 200 - len(linha_2) - len(numero_linha_str)
+            linha_2 += (' ' * espacos_restantes) + numero_linha_str
+            file.write(linha_2 + "\n")
+            numero_linha += 1
+            
+            # 4 linhas de zeros
+            for _ in range(4):
+                zeros_line = "0" * 200
+                file.write(zeros_line + "\n")
+                numero_linha += 1
+            
+            # TODAS as linhas de voo das companhias selecionadas
+            flight_date_counter = {}
+            
+            # Processar cada companhia selecionada
+            for companhia in companias_selecionadas:
+                print(f"🔄 Processando companhia: {companhia}")
+                
+                df_companhia = df[df[airline_col] == companhia]
+                if len(df_companhia) == 0:
+                    continue
+                
+                # Processar voos desta companhia
+                try:
+                    if 'Flight' in df_companhia.columns:
+                        df_companhia['Flight_num'] = pd.to_numeric(df_companhia['Flight'], errors='coerce')
+                        
+                        if 'Eff Date' in df_companhia.columns:
+                            df_companhia['Eff Date_dt'] = pd.to_datetime(df_companhia['Eff Date'], errors='coerce')
+                            df_sorted = df_companhia.sort_values(by=['Flight_num', 'Eff Date_dt'])
+                        else:
+                            df_sorted = df_companhia.sort_values(by=['Flight_num'])
+                    else:
+                        df_sorted = df_companhia
+                except Exception as e:
+                    print(f"⚠️ Erro ao ordenar dados para {companhia}: {e}")
+                    df_sorted = df_companhia
+                
+                # Linhas 3 - voos desta companhia
+                for idx, row in df_sorted.iterrows():
+                    try:
+                        # Extrair dados básicos
+                        if 'Flight' in row and pd.notna(row['Flight']):
+                            try:
+                                numero_voo = str(int(float(row['Flight']))).strip()
+                            except (ValueError, TypeError):
+                                numero_voo = "001"
+                        else:
+                            numero_voo = "001"
+                        
+                        origem = str(row.get('Orig', 'SFO')).strip().upper()
+                        destino = str(row.get('Dest', 'SFO')).strip().upper()
+                        
+                        # Frequência
+                        if 'Op Days' in row:
+                            frequencia = determinar_dia_semana_sfo(row['Op Days'])
+                        else:
+                            frequencia = "1234567"
+                        
+                        # Status do voo baseado em Seats (cargo vs passageiro)
+                        seats = row.get('Seats', None)
+                        status = determinar_status_sfo(seats)
+                        
+                        # Datas (usar Eff Date e Disc Date para período completo)
+                        if 'Eff Date' in row and pd.notna(row['Eff Date']):
+                            data_partida = parse_date_sfo(row['Eff Date'])
+                        else:
+                            data_partida = data_min_str
+                        
+                        if 'Disc Date' in row and pd.notna(row['Disc Date']):
+                            data_chegada = parse_date_sfo(row['Disc Date'])
+                        else:
+                            data_chegada = data_max_str
+                        
+                        # Horários
+                        dep_time = row.get('Dep Time', '12:00')
+                        arr_time = row.get('Arr Time', '14:00')
+                        partida = parse_time_sfo(dep_time)
+                        chegada = parse_time_sfo(arr_time)
+                        
+                        # Equipamento (usar coluna Equip se disponível)
+                        equipment = row.get('Equip', row.get('Equipment', 'A320'))
+                        equipamento = get_aircraft_type_sfo(equipment)
+                        
+                        # Timezone offsets
+                        origem_timezone_offset = iata_to_timezone.get(origem, 0.0)
+                        destino_timezone_offset = iata_to_timezone.get(destino, 0.0)
+                        origem_timezone_formatted = format_timezone_offset(str(origem_timezone_offset))
+                        destino_timezone_formatted = format_timezone_offset(str(destino_timezone_offset))
+                        
+                        # Lógica de date_counter (global para todas as companhias)
+                        voo_key = f"{companhia}_{numero_voo}"
+                        if voo_key not in flight_date_counter:
+                            flight_date_counter[voo_key] = 0
+                        flight_date_counter[voo_key] += 1
+                        date_counter = flight_date_counter[voo_key]
+                        
+                        # Construir linha 3
+                        numero_voo_padded = numero_voo.zfill(4)
+                        etapa = "01"
+                        eight_char_field = f"{numero_voo_padded}{str(date_counter).zfill(2)}{etapa}"
+                        numero_voo_display = numero_voo.rjust(5)
+                        numero_linha_str = f"{numero_linha:08}"
+                        
+                        linha_3 = (
+                            f"3 "
+                            f"{companhia:<2} "
+                            f"{eight_char_field}"
+                            f"{status}"
+                            f"{data_partida}"
+                            f"{data_chegada}"
+                            f"{frequencia}"
+                            f" "
+                            f"{origem:<3}"
+                            f"{partida}"
+                            f"{partida}"
+                            f"{origem_timezone_formatted}"
+                            f"  "
+                            f"{destino:<3}"
+                            f"{chegada}"
+                            f"{chegada}"
+                            f"{destino_timezone_formatted}"
+                            f"  "
+                            f"{equipamento:<3}"
+                            f"{' ':53}"
+                            f"{companhia:<2}"
+                            f"{' ':7}"
+                            f"{companhia:<2}"
+                            f"{numero_voo_display}"
+                            f"{' ':28}"
+                            f"{' ':6}"
+                            f"{' ':5}"
+                            f"{' ':9}"
+                            f"{numero_linha_str}"
+                        )
+                        
+                        linha_3 = linha_3.ljust(200)
+                        file.write(linha_3 + "\n")
+                        numero_linha += 1
+                        
+                    except Exception as e:
+                        print(f"⚠️ Erro ao processar linha {idx} da companhia {companhia}: {e}")
+                        continue
+                
+                print(f"✅ Companhia {companhia} processada: {len(df_companhia)} voos")
+            
+            # UM ÚNICO FOOTER no final
+            # 4 linhas de zeros finais
+            for _ in range(4):
+                zeros_line = "0" * 200
+                file.write(zeros_line + "\n")
+                numero_linha += 1
+            
+            # Footer para múltiplas companhias
+            airlines_code = "MIX" if len(companias_selecionadas) > 1 else companias_selecionadas[0]
+            numero_linha_str = f"{numero_linha + 1:06}"
+            linha_5_conteudo = f"5 {airlines_code} {data_emissao}"
+            numero_linha_str2 = f"{numero_linha:06}E"
+            espacos_necessarios = 200 - len(linha_5_conteudo) - len(numero_linha_str) - len(numero_linha_str2)
+            linha_5 = linha_5_conteudo + (' ' * espacos_necessarios) + numero_linha_str2 + numero_linha_str
+            file.write(linha_5 + "\n")
+            numero_linha += 1
+        
+        print(f"✅ Arquivo SSIM MÚLTIPLAS COMPANHIAS gerado: {output_file}")
+        print(f"📊 Total de linhas: {numero_linha}")
+        print(f"🏢 Companhias processadas: {len(companias_selecionadas)}")
+        
+        return output_file
+        
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
 def gerar_ssim_todas_companias(excel_path, output_file=None):
     """
     Gera arquivo SSIM com TODAS as companhias em um único arquivo

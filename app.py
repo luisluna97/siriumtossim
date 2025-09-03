@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-from sirium_to_ssim_converter import gerar_ssim_sirium, gerar_ssim_todas_companias
+from sirium_to_ssim_converter import gerar_ssim_sirium, gerar_ssim_todas_companias, gerar_ssim_multiplas_companias
 from version import get_version_info
 
 def main():
@@ -218,19 +218,41 @@ def main():
                 
                 with col1:
                     st.markdown("**Select Conversion Mode:**")
-                    # Adicionar opção "All Companies"
-                    airline_options = ["ALL_COMPANIES"] + available_airlines
-                    airline_labels = ["🌍 All Companies (Single SSIM File)"] + [f"✈️ {airline}" for airline in available_airlines]
                     
-                    selected_option = st.selectbox(
-                        "Conversion Option:",
-                        options=airline_options,
-                        format_func=lambda x: airline_labels[airline_options.index(x)],
-                        help="Choose specific airline or process all companies in one SSIM file",
+                    # Opções de conversão
+                    conversion_mode = st.radio(
+                        "Conversion Mode:",
+                        options=["SINGLE", "MULTIPLE", "ALL_COMPANIES"],
+                        format_func=lambda x: {
+                            "SINGLE": "✈️ Single Airline",
+                            "MULTIPLE": "🎯 Multiple Airlines (Custom Selection)",
+                            "ALL_COMPANIES": "🌍 All Companies"
+                        }[x],
+                        help="Choose conversion mode",
                         label_visibility="collapsed"
                     )
                     
-                    selected_airline = selected_option
+                    # Seleção baseada no modo
+                    if conversion_mode == "SINGLE":
+                        selected_airline = st.selectbox(
+                            "Select Airline:",
+                            options=available_airlines,
+                            help="Choose specific airline for conversion"
+                        )
+                        selected_airlines = [selected_airline]
+                        
+                    elif conversion_mode == "MULTIPLE":
+                        selected_airlines = st.multiselect(
+                            "Select Airlines to Include:",
+                            options=available_airlines,
+                            default=[],
+                            help="Choose multiple airlines to include in one SSIM file"
+                        )
+                        selected_airline = "MULTIPLE_SELECTED"
+                        
+                    else:  # ALL_COMPANIES
+                        selected_airline = "ALL_COMPANIES"
+                        selected_airlines = available_airlines
                 
                 with col2:
                     st.markdown("**Custom Filename (Optional):**")
@@ -241,17 +263,29 @@ def main():
                         label_visibility="collapsed"
                     )
                 
-                # Filter data by selected airline
-                if selected_airline == "ALL_COMPANIES":
+                # Filter data by selected airline(s)
+                if conversion_mode == "ALL_COMPANIES":
                     df_filtered = df  # Usar todos os dados
                     display_airline = "ALL"
-                else:
+                elif conversion_mode == "MULTIPLE":
+                    if selected_airlines:
+                        df_filtered = df[df[airline_col].isin(selected_airlines)]
+                        display_airline = f"{len(selected_airlines)} airlines ({', '.join(selected_airlines)})"
+                    else:
+                        df_filtered = pd.DataFrame()  # DataFrame vazio se nada selecionado
+                        display_airline = "None selected"
+                else:  # SINGLE
                     df_filtered = df[df[airline_col] == selected_airline]
                     display_airline = selected_airline
                 
                 # Show filtered data preview
-                if selected_airline == "ALL_COMPANIES":
+                if conversion_mode == "ALL_COMPANIES":
                     st.subheader(f"📋 All Companies Schedule Preview ({len(available_airlines)} airlines)")
+                elif conversion_mode == "MULTIPLE":
+                    if selected_airlines:
+                        st.subheader(f"📋 Multiple Airlines Preview ({', '.join(selected_airlines)})")
+                    else:
+                        st.subheader("📋 Select Airlines to Preview")
                 else:
                     st.subheader(f"📋 {selected_airline} Schedule Preview")
                 
@@ -299,13 +333,23 @@ def main():
                 with col2:
                     # Check selected airline data
                     if len(df_filtered) > 0:
-                        if selected_airline == "ALL_COMPANIES":
+                        if conversion_mode == "ALL_COMPANIES":
                             st.success(f"✅ {len(df_filtered)} flights found for all companies")
+                        elif conversion_mode == "MULTIPLE":
+                            if selected_airlines:
+                                st.success(f"✅ {len(df_filtered)} flights found for {len(selected_airlines)} selected airlines")
+                            else:
+                                st.warning("⚠️ Please select at least one airline")
                         else:
                             st.success(f"✅ {len(df_filtered)} flights found for {selected_airline}")
                     else:
-                        if selected_airline == "ALL_COMPANIES":
+                        if conversion_mode == "ALL_COMPANIES":
                             st.error(f"❌ No flights found for any company")
+                        elif conversion_mode == "MULTIPLE":
+                            if selected_airlines:
+                                st.error(f"❌ No flights found for selected airlines")
+                            else:
+                                st.warning("⚠️ Please select at least one airline")
                         else:
                             st.error(f"❌ No flights found for {selected_airline}")
                 
@@ -317,14 +361,28 @@ def main():
                 with col2:
                     if st.button("🚀 Convert to SSIM", type="primary", use_container_width=True):
                         
+                        # Validação antes da conversão
+                        if conversion_mode == "MULTIPLE" and not selected_airlines:
+                            st.error("❌ Please select at least one airline for conversion")
+                            return
+                            
                         if len(df_filtered) == 0:
-                            if selected_airline == "ALL_COMPANIES":
+                            if conversion_mode == "ALL_COMPANIES":
                                 st.error(f"❌ Cannot convert: no flights found for any company")
+                            elif conversion_mode == "MULTIPLE":
+                                st.error(f"❌ Cannot convert: no flights found for selected airlines")
                             else:
                                 st.error(f"❌ Cannot convert: no flights found for {selected_airline}")
                             return
                         
-                        conversion_label = "all companies" if selected_airline == "ALL_COMPANIES" else selected_airline
+                        # Label para spinner
+                        if conversion_mode == "ALL_COMPANIES":
+                            conversion_label = "all companies"
+                        elif conversion_mode == "MULTIPLE":
+                            conversion_label = f"{len(selected_airlines)} selected airlines ({', '.join(selected_airlines)})"
+                        else:
+                            conversion_label = selected_airline
+                            
                         with st.spinner(f"Converting {conversion_label} schedule to SSIM..."):
                             try:
                                 # Determine output filename
@@ -334,9 +392,11 @@ def main():
                                     output_file = None
                                 
                                 # Execute conversion
-                                if selected_airline == "ALL_COMPANIES":
+                                if conversion_mode == "ALL_COMPANIES":
                                     result = gerar_ssim_todas_companias(temp_file_path, output_file)
-                                else:
+                                elif conversion_mode == "MULTIPLE":
+                                    result = gerar_ssim_multiplas_companias(temp_file_path, selected_airlines, output_file)
+                                else:  # SINGLE
                                     result = gerar_ssim_sirium(temp_file_path, selected_airline, output_file)
                                 
                                 if result:
@@ -369,8 +429,10 @@ def main():
                                     with col2:
                                         st.metric("✈️ Flight Records", len(flight_lines))
                                     with col3:
-                                        if selected_airline == "ALL_COMPANIES":
+                                        if conversion_mode == "ALL_COMPANIES":
                                             st.metric("🏢 Airlines", f"{len(available_airlines)} companies")
+                                        elif conversion_mode == "MULTIPLE":
+                                            st.metric("🏢 Airlines", f"{len(selected_airlines)} selected")
                                         else:
                                             st.metric("🏢 Airline", selected_airline)
                                     with col4:
