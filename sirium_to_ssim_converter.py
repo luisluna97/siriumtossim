@@ -29,9 +29,24 @@ def determinar_dia_semana_sfo(op_days_str):
     # Fallback: todos os dias
     return "1234567"
 
-def determinar_status_sfo(service_type=None):
-    """Determina o status do voo - assumindo passageiro por padrão (baseado no old_project)"""
-    return "J"  # Scheduled passenger service
+def determinar_status_sfo(seats=None, service_type=None):
+    """
+    Determina o status do voo baseado na coluna Seats:
+    - Seats = 0 → Cargo (F)
+    - Seats > 0 → Passageiro (J)
+    """
+    try:
+        # Verificar se temos informação de assentos
+        if pd.notna(seats):
+            seats_num = float(seats)
+            if seats_num == 0:
+                return "F"  # Scheduled cargo service
+            else:
+                return "J"  # Scheduled passenger service
+        else:
+            return "J"  # Default: passenger service
+    except (ValueError, TypeError):
+        return "J"  # Default: passenger service
 
 def format_timezone_offset(offset_str):
     """Formata offset de timezone para padrão SSIM (igual ao old_project)"""
@@ -402,7 +417,9 @@ def gerar_ssim_todas_companias(excel_path, output_file=None):
                         else:
                             frequencia = "1234567"
                         
-                        status = determinar_status_sfo()
+                        # Status do voo baseado em Seats (cargo vs passageiro)
+                        seats = row.get('Seats', None)
+                        status = determinar_status_sfo(seats)
                         
                         # Datas (usar Eff Date e Disc Date para período completo)
                         if 'Eff Date' in row and pd.notna(row['Eff Date']):
@@ -787,8 +804,9 @@ def gerar_ssim_sirium(excel_path, codigo_iata_selecionado, output_file=None):
                     else:
                         frequencia = "1234567"
                     
-                    # Status do voo
-                    status = determinar_status_sfo()
+                    # Status do voo baseado em Seats (cargo vs passageiro)
+                    seats = row.get('Seats', None)
+                    status = determinar_status_sfo(seats)
                     
                     # Datas (usar Eff Date e Disc Date para período completo)
                     if 'Eff Date' in row and pd.notna(row['Eff Date']):
