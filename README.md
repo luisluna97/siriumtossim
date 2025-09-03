@@ -1,18 +1,19 @@
-# ✈️ CIRUIM to SSIM Converter
+# ✈️ CIRIUM to SSIM Converter
 
-**Professional airline schedule converter developed by Capacity Dnata Brasil**
+**CIRIUM airline schedule converter developed by Capacity Dnata Brasil**
 
 ## 🎯 Overview
 
-CIRUIM is a powerful converter that transforms airline schedules from CIRUIM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
+CIRIUM is converter that transforms airline schedules from CIRUIM format (based on SFO Schedule Extract Reports) to SSIM (Standard Schedules Information Manual) format, following IATA standards.
 
 ## ✨ Key Features
 
-- 🏢 **Multiple Airlines Support**: Process multiple airlines in the same file
-- 🎯 **Airline Selection**: Choose specific airline after file upload
+- 🌍 **All Companies Mode**: Process ALL airlines in one SSIM file (NEW v1.1.0!)
+- 🏢 **Single Airline Mode**: Choose specific airline after file upload
+- 📅 **Fixed Date Periods**: Correct Eff Date to Disc Date periods in flight lines (NEW v1.1.0!)
 - ✅ **SSIM Standard**: Generates IATA-compatible 200-character line format
+- 👀 **Enhanced Preview**: View up to 50 lines of generated SSIM (NEW v1.1.0!)
 - 🔍 **Data Validation**: Complete integrity checks and format validation
-- 📊 **Real-time Preview**: View data before conversion
 - 📥 **Instant Download**: Download generated SSIM files immediately
 
 ## 🚀 Quick Start
@@ -135,6 +136,20 @@ CIRUIM combines the best of both worlds:
 - ✅ **Validation** with real-time feedback
 - ✅ **User Experience** with intuitive interface
 
+## 📈 Version History
+
+### v1.1.0 (2025-01-27) - Major Updates
+- 🔧 **Fixed Date Operation Period**: Flight lines (type 3) now use correct Eff Date to Disc Date periods
+- 🌍 **All Companies Mode**: Generate SSIM with all airlines in single file
+- 👀 **Enhanced Preview**: Increased preview from 8 to 50 lines
+- 🎨 **Optimized Layout**: Cleaner interface with compact information display
+
+### v1.0.1.1 (2025-08-25)
+- 🎭 **REBRAND**: SIRIUM → CIRUIM (Time parsing working perfectly)
+
+### v1.0.0
+- 🚀 **Initial Release**: Basic CIRUIM to SSIM conversion
+
 ---
 
-*Version 1.0 - Professional Airline Operations Tool*
+*Professional Airline Operations Tool - [GitHub Repository](https://github.com/luisluna97/siriumtossim)*

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-from sirium_to_ssim_converter import gerar_ssim_sirium
+from sirium_to_ssim_converter import gerar_ssim_sirium, gerar_ssim_todas_companias
 from version import get_version_info
 
 def main():
@@ -13,27 +13,18 @@ def main():
         initial_sidebar_state="collapsed"
     )
     
-    # Header
+    # Header compacto
     version_info = get_version_info()
-    st.title("✈️ CIRUIM to SSIM Converter")
-    st.markdown("**Developed by Capacity Dnata Brasil**")
-    st.markdown(f"*Version {version_info['version']} - {version_info['date']}*")
-    st.markdown("---")
     
-    st.markdown("""
-    ### 📋 About CIRUIM Converter
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("✈️ CIRUIM to SSIM Converter")
+        st.markdown("**Developed by Capacity Dnata Brasil**")
     
-    This converter transforms airline schedules from **CIRUIM format** (based on SFO Schedule Extract Reports) 
-    to **SSIM** (Standard Schedules Information Manual) format.
-    
-    **Key Features:**
-    - ✅ **Multiple Airlines Support**: Process multiple airlines in the same file
-    - ✅ **Airline Selection**: Choose specific airline after upload
-    - ✅ **SSIM Standard**: Generates IATA-compatible files
-    - ✅ **Data Validation**: Integrity checks before conversion
-    - ✅ **200-Character Lines**: Proper SSIM formatting
-    - ✅ **Complete Structure**: Header, Carrier Info, Flight Records, Footer
-    """)
+    with col2:
+        st.markdown("### 🔗 Links")
+        st.markdown("[📱 GitHub](https://github.com/luisluna97/siriumtossim)")
+        st.markdown(f"**v{version_info['version']}** • {version_info['date']}")
     
     st.markdown("---")
     
@@ -108,11 +99,18 @@ def main():
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    selected_airline = st.selectbox(
-                        "Select Airline for Conversion:",
-                        options=available_airlines,
-                        help="Choose the airline to convert to SSIM format"
+                    # Adicionar opção "All Companies"
+                    airline_options = ["ALL_COMPANIES"] + available_airlines
+                    airline_labels = ["🌍 All Companies"] + [f"✈️ {airline}" for airline in available_airlines]
+                    
+                    selected_option = st.selectbox(
+                        "Select Conversion Option:",
+                        options=airline_options,
+                        format_func=lambda x: airline_labels[airline_options.index(x)],
+                        help="Choose specific airline or all companies in one file"
                     )
+                    
+                    selected_airline = selected_option
                 
                 with col2:
                     output_filename = st.text_input(
@@ -122,10 +120,18 @@ def main():
                     )
                 
                 # Filter data by selected airline
-                df_filtered = df[df[airline_col] == selected_airline]
+                if selected_airline == "ALL_COMPANIES":
+                    df_filtered = df  # Usar todos os dados
+                    display_airline = "ALL"
+                else:
+                    df_filtered = df[df[airline_col] == selected_airline]
+                    display_airline = selected_airline
                 
                 # Show filtered data preview
-                st.subheader(f"📋 {selected_airline} Schedule Preview")
+                if selected_airline == "ALL_COMPANIES":
+                    st.subheader(f"📋 All Companies Schedule Preview ({len(available_airlines)} airlines)")
+                else:
+                    st.subheader(f"📋 {selected_airline} Schedule Preview")
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
@@ -171,9 +177,15 @@ def main():
                 with col2:
                     # Check selected airline data
                     if len(df_filtered) > 0:
-                        st.success(f"✅ {len(df_filtered)} flights found for {selected_airline}")
+                        if selected_airline == "ALL_COMPANIES":
+                            st.success(f"✅ {len(df_filtered)} flights found for all companies")
+                        else:
+                            st.success(f"✅ {len(df_filtered)} flights found for {selected_airline}")
                     else:
-                        st.error(f"❌ No flights found for {selected_airline}")
+                        if selected_airline == "ALL_COMPANIES":
+                            st.error(f"❌ No flights found for any company")
+                        else:
+                            st.error(f"❌ No flights found for {selected_airline}")
                 
                 st.markdown("---")
                 
@@ -184,10 +196,14 @@ def main():
                     if st.button("🚀 Convert to SSIM", type="primary", use_container_width=True):
                         
                         if len(df_filtered) == 0:
-                            st.error(f"❌ Cannot convert: no flights found for {selected_airline}")
+                            if selected_airline == "ALL_COMPANIES":
+                                st.error(f"❌ Cannot convert: no flights found for any company")
+                            else:
+                                st.error(f"❌ Cannot convert: no flights found for {selected_airline}")
                             return
                         
-                        with st.spinner(f"Converting {selected_airline} schedule to SSIM..."):
+                        conversion_label = "all companies" if selected_airline == "ALL_COMPANIES" else selected_airline
+                        with st.spinner(f"Converting {conversion_label} schedule to SSIM..."):
                             try:
                                 # Determine output filename
                                 if output_filename:
@@ -196,7 +212,10 @@ def main():
                                     output_file = None
                                 
                                 # Execute conversion
-                                result = gerar_ssim_sirium(temp_file_path, selected_airline, output_file)
+                                if selected_airline == "ALL_COMPANIES":
+                                    result = gerar_ssim_todas_companias(temp_file_path, output_file)
+                                else:
+                                    result = gerar_ssim_sirium(temp_file_path, selected_airline, output_file)
                                 
                                 if result:
                                     st.success("✅ SSIM conversion completed successfully!")
@@ -228,7 +247,10 @@ def main():
                                     with col2:
                                         st.metric("✈️ Flight Records", len(flight_lines))
                                     with col3:
-                                        st.metric("🏢 Airline", selected_airline)
+                                        if selected_airline == "ALL_COMPANIES":
+                                            st.metric("🏢 Airlines", f"{len(available_airlines)} companies")
+                                        else:
+                                            st.metric("🏢 Airline", selected_airline)
                                     with col4:
                                         st.metric("📁 File Size", f"{os.path.getsize(result)} bytes")
                                     
@@ -264,16 +286,14 @@ def main():
                                     # Show SSIM preview
                                     st.subheader("👀 SSIM File Preview")
                                     
-                                    # Show first few flight lines for preview
+                                    # Show first 50 lines for preview
                                     preview_lines = []
                                     line_count = 0
                                     for line in ssim_lines:
-                                        if line_count < 5 or line.startswith('3 ') or line.startswith('5 '):
-                                            preview_lines.append(line.rstrip())
-                                            if line.startswith('3 '):
-                                                line_count += 1
-                                                if line_count > 8:  # Show max 5 flight lines
-                                                    break
+                                        preview_lines.append(line.rstrip())
+                                        line_count += 1
+                                        if line_count >= 50:  # Show max 50 lines
+                                            break
                                     
                                     st.code("\\n".join(preview_lines), language="text")
                                     
@@ -302,51 +322,33 @@ def main():
             if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
     
-    # Help Section
+    # Footer compacto
     st.markdown("---")
-    with st.expander("❓ Help & Technical Information"):
-        st.markdown("""
-        ### 📖 How to use:
-        
-        1. **Upload**: Upload your Excel file with CIRUIM schedule
-        2. **Preview**: Review available airlines and data
-        3. **Select**: Choose the airline for conversion
-        4. **Convert**: Click "Convert to SSIM"
-        5. **Validate**: Check the SSIM structure
-        6. **Download**: Download the generated SSIM file
-        
-        ### 📋 Expected CIRUIM Format:
-        
-        The file must contain these columns (starting from row 5):
-        - `Mkt Al` or `Op Al`: Airline code (2 letters)
-        - `Orig`: Origin airport (IATA code)
-        - `Dest`: Destination airport (IATA code)
-        - `Flight`: Flight number
-        - `Eff Date`: Effective date
-        - `Disc Date`: Discontinue date
-        - `Op Days`: Operating days (format: 1234567)
-        
-        ### 🔧 Technical Features:
-        
-        - **200-Character Lines**: Proper SSIM formatting
-        - **Complete Structure**: Header, Carrier Info, Flight Records, Footer
-        - **Timezone Support**: Automatic timezone mapping
-        - **Aircraft Mapping**: ICAO to IATA conversion
-        - **Data Validation**: Integrity checks and format validation
-        - **Multiple Airlines**: Support for various airlines in same file
-        
-        ### 📞 Support:
-        Developed by **Capacity Dnata Brasil** for professional airline operations.
-        """)
-        
-        # Add version info separately to avoid formatting issues
-        version_info = get_version_info()
-        st.markdown("### 📋 Version Information:")
-        st.markdown(f"""
-        - **Version:** {version_info['version']}
-        - **Release Date:** {version_info['date']}
-        - **Latest Changes:** {version_info['notes']}
-        """)
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        with st.expander("❓ Help & Format Info"):
+            st.markdown("""
+            **📖 How to use:** Upload Excel → Select airline/All Companies → Convert → Download
+            
+            **📋 Required columns (row 5):** `Mkt Al/Op Al`, `Orig`, `Dest`, `Flight`, `Eff Date`, `Disc Date`, `Op Days`
+            
+            **🔧 Output:** IATA-standard SSIM files with 200-character lines
+            """)
+    
+    with col2:
+        with st.expander("📋 Version Updates"):
+            version_info = get_version_info()
+            st.markdown(f"""
+            **v{version_info['version']}** - {version_info['date']}
+            
+            {version_info['notes']}
+            
+            **Previous versions:**
+            - v1.0.1.1 - SIRIUM → CIRUIM rebrand
+            - v1.0.0 - Initial release
+            """)
 
 if __name__ == "__main__":
     main()
